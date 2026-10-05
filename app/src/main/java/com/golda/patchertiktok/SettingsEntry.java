@@ -40,6 +40,7 @@ final class SettingsEntry {
     private static final String PRIVACY_GROUP = "com.ss.android.ugc.aweme.setting.ui.rvmpcompose.group.privacy.PrivacyGroupVM";
     private static final String PRIVACY_ITEM = "com.ss.android.ugc.aweme.setting.ui.rvmpcompose.group.privacy.cell.PrivacyItemVM";
 
+    private static volatile Application application;
     private static volatile Object item;
     private static volatile Object state;
     private static volatile WeakReference<Activity> resumed = new WeakReference<>(null);
@@ -64,6 +65,7 @@ final class SettingsEntry {
     }
 
     static void install(Application app, ClassLoader loader) {
+        application = app;
         trackActivities(app);
         try {
             injectRow(loader);
@@ -202,7 +204,7 @@ final class SettingsEntry {
     /** TikTok's VectorResource(resId) with the Tux puzzle icon; the id differs per build, the name does not. */
     @android.annotation.SuppressLint("DiscouragedApi")
     private static Object icon(Class<?> type, ClassLoader loader) {
-        Application app = currentApplication();
+        Application app = application;
         if (app == null) return null;
         int id = app.getResources().getIdentifier("icon_puzzle", "raw", app.getPackageName());
         if (id == 0) return null;
@@ -315,14 +317,5 @@ final class SettingsEntry {
             current = ((ContextWrapper) current).getBaseContext();
         }
         return null;
-    }
-
-    private static Application currentApplication() {
-        try {
-            return (Application) Class.forName("android.app.ActivityThread")
-                    .getMethod("currentApplication").invoke(null);
-        } catch (Throwable error) {
-            return null;
-        }
     }
 }

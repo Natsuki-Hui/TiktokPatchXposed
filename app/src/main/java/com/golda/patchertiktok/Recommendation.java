@@ -1,5 +1,6 @@
 package com.golda.patchertiktok;
 
+import android.app.Application;
 import android.content.res.Resources;
 
 import java.util.ArrayList;
@@ -7,18 +8,25 @@ import java.util.Collections;
 
 
 /**
- * Keeps the content language on the device language while the region spoof is active,
- * so a German SIM does not switch recommendations to German videos.
+ * Keeps the content language on the user's language while the region spoof is active,
+ * so a German SIM does not switch recommendations to German videos. TikTok's own app
+ * language wins over the system language when the user picked one in TikTok.
  */
 final class Recommendation {
+    private static volatile Application app;
+
     private Recommendation() { }
 
     static String language() {
-        String language = Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
+        Application context = app;
+        Resources resources = context != null ? context.getResources() : Resources.getSystem();
+        String language = resources.getConfiguration().getLocales().get(0).getLanguage();
+        if (language.isEmpty()) language = Resources.getSystem().getConfiguration().getLocales().get(0).getLanguage();
         return language.isEmpty() ? "en" : language;
     }
 
-    static void install(ClassLoader loader) {
+    static void install(Application context, ClassLoader loader) {
+        app = context;
         Hooks.Replace language = new Hooks.Replace() {
             @Override protected Object replace(Hooks.Call param) {
                 return language();

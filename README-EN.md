@@ -4,7 +4,7 @@
 
 An LSPosed module for TikTok. It removes ads, unlocks features TikTok only gives to some users, and adds a few useful extras. All settings are inside TikTok itself.
 
-Current version: 4.0.1. Tested on TikTok 47.1.4 from Google Play, Android 16.
+Current version: 4.0.2. Tested on TikTok 47.1.4 from Google Play, Android 16.
 
 ## Features
 
@@ -23,10 +23,16 @@ Current version: 4.0.1. Tested on TikTok 47.1.4 from Google Play, Android 16.
 - downloads without a watermark
 - download any video, even if the author turned downloads off
 - screenshots and screen recording work everywhere
-- clean links: tracking parameters (`_r`, `_t`, `u_code`, `share_link_id` and so on) are removed from copied TikTok links
+- clean links: a copied short link like `vt.tiktok.com/…` (it tells TikTok who shared the video) is replaced with the plain video link a second later, and tracking parameters (`_r`, `_t`, `u_code`, `share_link_id` and so on) are removed from long links
 
 **Region**
-- SIM country spoofing with around 190 countries. Germany is the default; you can pick another country or turn it off. Recommendations stay in your own language
+- SIM country spoofing with around 190 countries. Germany is the default; you can pick another country or turn it off. Recommendations stay in the language you use TikTok in; turn off "Recommendations in my language" to get videos picked for the selected country instead
+
+**Invisible mode** (off by default)
+- hide story views: authors won't see you among their viewers
+- hide profile visits: turn on TikTok's profile view history to see your visitors without showing up in other people's lists
+- hide video views from people you follow: with view history on, they won't see which of their videos you watched
+- this is a test feature: TikTok's view reports are confirmed to be cancelled, but how it looks to other people hasn't been confirmed yet
 
 **Streaks**
 - auto streaks, off by default, see below
@@ -47,7 +53,7 @@ The module has no app of its own. The settings button in LSPosed opens the same 
 2. Force-stop TikTok and open it again.
 3. Open TikTok's settings → TiktokPatchXposed.
 
-Updating from an older version: just install over it. Auto streaks need to be turned on again after updating.
+Updating: install over the old version, settings are kept. Only when coming from 3.x, turn auto streaks on again.
 
 ## Compatibility
 

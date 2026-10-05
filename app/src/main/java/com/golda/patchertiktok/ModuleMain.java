@@ -25,7 +25,11 @@ public final class ModuleMain extends XposedModule {
 
     private final class Modern implements Hooks.Backend {
         @Override public void hook(Member target, Hooks.Hook hook) {
-            ModuleMain.this.hook((Executable) target).intercept(new Interceptor(target, hook));
+            // Errors in the module's own callbacks are caught in Hooks; what still escapes is either the
+            // original method's exception or one a hook throws on purpose, and both must reach the caller.
+            // The default protective mode would swallow the latter and run the original method instead.
+            ModuleMain.this.hook((Executable) target).setExceptionMode(ExceptionMode.PASSTHROUGH)
+                    .intercept(new Interceptor(target, hook));
         }
 
         @Override public void log(String message) {

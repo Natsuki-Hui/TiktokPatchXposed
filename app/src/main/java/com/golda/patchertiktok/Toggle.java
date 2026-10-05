@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.animation.PathInterpolator;
 
 /** A switch drawn like TikTok's own toggle. The owning row handles clicks. */
+@android.annotation.SuppressLint("ViewConstructor")
 final class Toggle extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();

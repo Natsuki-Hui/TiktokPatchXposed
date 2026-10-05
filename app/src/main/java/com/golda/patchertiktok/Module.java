@@ -30,6 +30,7 @@ final class Module {
             run("downloads", () -> Downloads.install(loader));
             run("clean links", CleanLinks::install);
             run("rendered ads", () -> RenderedAdSkip.install(loader));
+            run("invisible mode", () -> Ghost.install(loader));
             run("google login", () -> googleLoginFix(loader));
         }
         // Every process: the settings screen and the restart trampoline are swapped in here.
@@ -45,7 +46,9 @@ final class Module {
     private static void startup(Application app, ClassLoader loader, boolean main) {
         Prefs.load(app);
         run("region", () -> RegionSpoof.install(loader));
-        if (RegionSpoof.active()) run("recommendation", () -> Recommendation.install(loader));
+        if (RegionSpoof.active() && Prefs.on(Prefs.REGION_LANGUAGE)) {
+            run("recommendation", () -> Recommendation.install(app, loader));
+        }
         if (!main) return;
         I18n.use(app.getResources().getConfiguration().getLocales().get(0));
         Discovery.init(app);

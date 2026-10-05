@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.content.res.ColorStateList;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -97,6 +98,22 @@ public final class ModSettingsActivity extends Activity {
         setContentView(root);
         push(mainPage(), false);
         updateRestartBar(false);
+    }
+
+    /**
+     * TikTok serves part of its strings through its own Resources subclass, and its code asks the top
+     * activity for them, e.g. for in-app message banners. With the plain activity resources such a
+     * banner crashed TikTok while this screen was open.
+     */
+    @Override
+    public Resources getResources() {
+        try {
+            Context app = getApplicationContext();
+            if (app != null) return app.getResources();
+        } catch (RuntimeException ignored) {
+            // Not attached yet.
+        }
+        return super.getResources();
     }
 
     @Override
@@ -230,7 +247,15 @@ public final class ModSettingsActivity extends Activity {
         LinearLayout regionCard = page.card();
         TextView regionValue = navigation(regionCard, I18n.get(S.REGION), regionLabel(),
                 view -> push(regionPage(), true));
+        View languageRow = toggle(regionCard, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE);
+        languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
         page.footer(I18n.get(S.REGION_DESC));
+
+        page.section(I18n.get(S.SECTION_GHOST));
+        LinearLayout ghost = page.card();
+        toggle(ghost, S.GHOST_STORIES, S.GHOST_STORIES_DESC, Prefs.GHOST_STORIES);
+        toggle(ghost, S.GHOST_PROFILE, S.GHOST_PROFILE_DESC, Prefs.GHOST_PROFILE);
+        toggle(ghost, S.GHOST_POSTS, S.GHOST_POSTS_DESC, Prefs.GHOST_POSTS);
 
         page.section(I18n.get(S.SECTION_STREAKS));
         LinearLayout streaks = page.card();
@@ -244,7 +269,10 @@ public final class ModSettingsActivity extends Activity {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(SOURCE_URL)));
             } catch (RuntimeException ignored) { }
         });
-        page.root.setTag((Runnable) () -> regionValue.setText(regionLabel()));
+        page.root.setTag((Runnable) () -> {
+            regionValue.setText(regionLabel());
+            languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
+        });
         return page.root;
     }
 
@@ -304,7 +332,7 @@ public final class ModSettingsActivity extends Activity {
 
     // ---- rows ------------------------------------------------------------------------------
 
-    private void toggle(LinearLayout card, S title, S description, String key) {
+    private View toggle(LinearLayout card, S title, S description, String key) {
         LinearLayout row = row(card);
         LinearLayout texts = texts(row, I18n.get(title), description == null ? null : I18n.get(description));
         Toggle toggle = new Toggle(this, palette);
@@ -329,6 +357,7 @@ public final class ModSettingsActivity extends Activity {
                 info.setChecked(toggle.checked());
             }
         });
+        return row;
     }
 
     private TextView navigation(LinearLayout card, String title, String value, View.OnClickListener click) {

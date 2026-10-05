@@ -12,9 +12,19 @@ public class CleanLinksTest {
     }
 
     @Test
-    public void keepsUnrelatedParametersAndFragment() {
-        assertEquals("https://www.tiktok.com/@user/video/123?lang=de#top",
-                CleanLinks.cleanUrl("https://www.tiktok.com/@user/video/123?lang=de&utm_source=copy#top"));
+    public void videoPhotoAndProfileLinksKeepNoQuery() {
+        assertEquals("https://www.tiktok.com/@user/video/123",
+                CleanLinks.cleanUrl("https://www.tiktok.com/@user/video/123?lang=de&preview_pb=0&sharer_language=ru"));
+        assertEquals("https://www.tiktok.com/@user/photo/456#top",
+                CleanLinks.cleanUrl("https://www.tiktok.com/@user/photo/456?_r=1&new_tracker=1#top"));
+        assertEquals("https://www.tiktok.com/@user",
+                CleanLinks.cleanUrl("https://www.tiktok.com/@user?_t=ZS-1&_r=1"));
+    }
+
+    @Test
+    public void otherTikTokPagesKeepTheirParameters() {
+        assertEquals("https://www.tiktok.com/search?q=cats",
+                CleanLinks.cleanUrl("https://www.tiktok.com/search?q=cats&utm_source=copy&_r=1"));
     }
 
     @Test

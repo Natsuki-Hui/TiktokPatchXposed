@@ -26,12 +26,17 @@ final class Prefs {
     static final String EXTRA_FEATURES = "extra_features";
     static final String CLEAN_LINKS = "clean_links";
     static final String REGION = "region";
+    /** With a region selected: keep recommendations in the user's language instead of the country's. */
+    static final String REGION_LANGUAGE = "region_keep_language";
     static final String AUTO_STREAK = "auto_streak";
+    static final String GHOST_STORIES = "ghost_stories";
+    static final String GHOST_PROFILE = "ghost_profile_views";
+    static final String GHOST_POSTS = "ghost_post_views";
     /** Germany keeps the behaviour of earlier releases; users can pick another country or turn it off. */
     static final String DEFAULT_REGION = "de";
 
     /** Keys whose hooks only take effect when TikTok starts. */
-    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, ADS};
+    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS};
 
     private static final Map<String, Boolean> DEFAULTS = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> FLAGS = new ConcurrentHashMap<>();
@@ -52,6 +57,10 @@ final class Prefs {
         DEFAULTS.put(NEW_PROFILE, true);
         DEFAULTS.put(EXTRA_FEATURES, true);
         DEFAULTS.put(CLEAN_LINKS, true);
+        DEFAULTS.put(REGION_LANGUAGE, true);
+        DEFAULTS.put(GHOST_STORIES, false);
+        DEFAULTS.put(GHOST_PROFILE, false);
+        DEFAULTS.put(GHOST_POSTS, false);
         // Automated messages are opt-in only.
         DEFAULTS.put(AUTO_STREAK, false);
     }

@@ -15,7 +15,9 @@ final class I18n {
         NEW_PROFILE_DESC, EXTRA_FEATURES, EXTRA_FEATURES_DESC, SECTION_SHARING, NO_WATERMARK,
         DOWNLOAD_ANY, DOWNLOAD_ANY_DESC, SCREENSHOTS, SCREENSHOTS_DESC, CLEAN_LINKS, CLEAN_LINKS_DESC,
         SECTION_REGION, REGION, REGION_DESC, REGION_OFF, SEARCH, SECTION_STREAKS, AUTO_STREAK,
-        AUTO_STREAK_DESC, SECTION_ABOUT, VERSION, SOURCE_CODE, RESTART_HINT, RESTART, OFF, BACK, STREAK_CHANNEL, STREAK_FAILED_TITLE, STREAK_FAILED_TEXT
+        AUTO_STREAK_DESC, SECTION_ABOUT, VERSION, SOURCE_CODE, RESTART_HINT, RESTART, OFF, BACK, STREAK_CHANNEL, STREAK_FAILED_TITLE, STREAK_FAILED_TEXT,
+        REGION_LANGUAGE, REGION_LANGUAGE_DESC, SECTION_GHOST, GHOST_STORIES, GHOST_STORIES_DESC,
+        GHOST_PROFILE, GHOST_PROFILE_DESC, GHOST_POSTS, GHOST_POSTS_DESC
     }
 
     private static final Map<String, String[]> TABLES = new HashMap<>();
@@ -41,7 +43,7 @@ final class I18n {
                 "Streaks",
                 "Auto streaks", "Keeps existing streaks in private chats alive while TikTok is open",
                 "About", "Version", "Source code", "Restart TikTok to apply the changes", "Restart",
-                "Off", "Back", "Auto streaks", "Auto streak not sent", "TikTok did not accept an automatic streak. Check the chat; if this repeats, turn auto streaks off for a while."});
+                "Off", "Back", "Auto streaks", "Auto streak not sent", "TikTok did not accept an automatic streak. Check the chat; if this repeats, turn auto streaks off for a while.", "Recommendations in my language", "Otherwise TikTok picks videos for the selected country", "Invisible mode", "Hide story views", "Authors won't see you among their story viewers", "Hide profile visits", "You won't appear in other people's profile views, even with TikTok's profile view history on", "Hide video views from people I follow", "With TikTok's view history on, they won't see which of their videos you watched"});
         TABLES.put("ru", new String[]{
                 "TiktokPatchXposed", "Лента",
                 "Блокировать рекламу", "В ленте, при запуске и в других списках видео",
@@ -62,7 +64,7 @@ final class I18n {
                 "Огоньки",
                 "Автоогоньки", "Поддерживает существующие огоньки в личных чатах, пока TikTok открыт",
                 "О модуле", "Версия", "Исходный код", "Перезапустите TikTok, чтобы применить изменения", "Перезапустить",
-                "Выкл.", "Назад", "Автоогоньки", "Автоогонёк не отправлен", "TikTok не принял автоматический огонёк. Проверьте чат; если это повторяется, выключите автоогоньки на время."});
+                "Выкл.", "Назад", "Автоогоньки", "Автоогонёк не отправлен", "TikTok не принял автоматический огонёк. Проверьте чат; если это повторяется, выключите автоогоньки на время.", "Рекомендации на моём языке", "Иначе TikTok подбирает видео под выбранную страну", "Невидимка", "Скрыть просмотр историй", "Автор не увидит вас среди зрителей истории", "Скрыть просмотр профилей", "Вы не появитесь в «Просмотрах профиля» у других, даже если включить эту функцию в TikTok", "Скрыть просмотр видео у подписок", "При включённой истории просмотров те, на кого вы подписаны, не увидят, какие их видео вы смотрели"});
         TABLES.put("uk", new String[]{
                 "TiktokPatchXposed", "Стрічка",
                 "Блокувати рекламу", "У стрічці, під час запуску та в інших списках відео",
@@ -83,7 +85,7 @@ final class I18n {
                 "Вогники",
                 "Автовогники", "Підтримує наявні вогники в особистих чатах, поки TikTok відкрито",
                 "Про модуль", "Версія", "Вихідний код", "Перезапустіть TikTok, щоб застосувати зміни", "Перезапустити",
-                "Вимк.", "Назад", "Автовогники", "Автовогник не надіслано", "TikTok не прийняв автоматичний вогник. Перевірте чат; якщо це повторюється, вимкніть автовогники на деякий час."});
+                "Вимк.", "Назад", "Автовогники", "Автовогник не надіслано", "TikTok не прийняв автоматичний вогник. Перевірте чат; якщо це повторюється, вимкніть автовогники на деякий час.", "Рекомендації моєю мовою", "Інакше TikTok добирає відео під обрану країну", "Невидимка", "Приховати перегляд історій", "Автор не побачить вас серед глядачів історії", "Приховати перегляд профілів", "Ви не з'явитеся в «Переглядах профілю» в інших, навіть якщо ввімкнути цю функцію в TikTok", "Приховати перегляд відео у підписок", "З увімкненою історією переглядів ті, на кого ви підписані, не побачать, які їхні відео ви дивилися"});
         TABLES.put("de", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Werbung blockieren", "Im Feed, beim Start und in anderen Videolisten",
@@ -104,7 +106,7 @@ final class I18n {
                 "Flammen",
                 "Auto-Flammen", "Hält bestehende Flammen in Privatchats aktiv, solange TikTok geöffnet ist",
                 "Info", "Version", "Quellcode", "Starte TikTok neu, um die Änderungen zu übernehmen", "Neu starten",
-                "Aus", "Zurück", "Auto-Flammen", "Auto-Flamme nicht gesendet", "TikTok hat eine automatische Flamme nicht angenommen. Prüfe den Chat; wenn das öfter passiert, schalte Auto-Flammen eine Weile aus."});
+                "Aus", "Zurück", "Auto-Flammen", "Auto-Flamme nicht gesendet", "TikTok hat eine automatische Flamme nicht angenommen. Prüfe den Chat; wenn das öfter passiert, schalte Auto-Flammen eine Weile aus.", "Empfehlungen in meiner Sprache", "Sonst wählt TikTok Videos für das gewählte Land aus", "Unsichtbar", "Story-Aufrufe verbergen", "Der Autor sieht dich nicht unter den Zuschauern seiner Story", "Profilbesuche verbergen", "Du erscheinst nicht in fremden Profilaufrufen, auch wenn der Verlauf in TikTok an ist", "Videoaufrufe bei gefolgten Konten verbergen", "Bei aktivem Verlauf sehen Leute, denen du folgst, nicht, welche ihrer Videos du angesehen hast"});
         TABLES.put("es", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anuncios", "En el feed, al iniciar y en otras listas de vídeos",
@@ -125,7 +127,7 @@ final class I18n {
                 "Rachas",
                 "Rachas automáticas", "Mantiene las rachas existentes en chats privados mientras TikTok está abierto",
                 "Acerca de", "Versión", "Código fuente", "Reinicia TikTok para aplicar los cambios", "Reiniciar",
-                "Desactivado", "Atrás", "Rachas automáticas", "Racha automática no enviada", "TikTok no aceptó una racha automática. Revisa el chat; si se repite, desactiva las rachas automáticas por un tiempo."});
+                "Desactivado", "Atrás", "Rachas automáticas", "Racha automática no enviada", "TikTok no aceptó una racha automática. Revisa el chat; si se repite, desactiva las rachas automáticas por un tiempo.", "Recomendaciones en mi idioma", "Si no, TikTok elige videos para el país seleccionado", "Modo invisible", "Ocultar vistas de historias", "El autor no te verá entre los espectadores de su historia", "Ocultar visitas al perfil", "No aparecerás en las vistas de perfil de otros, aunque actives el historial en TikTok", "Ocultar vistas de videos de quienes sigo", "Con el historial activado, no verán qué videos suyos has visto"});
         TABLES.put("pt", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anúncios", "No feed, ao abrir e em outras listas de vídeos",
@@ -146,7 +148,7 @@ final class I18n {
                 "Sequências",
                 "Sequências automáticas", "Mantém as sequências existentes em chats privados enquanto o TikTok está aberto",
                 "Sobre", "Versão", "Código-fonte", "Reinicie o TikTok para aplicar as alterações", "Reiniciar",
-                "Desativado", "Voltar", "Sequências automáticas", "Sequência automática não enviada", "O TikTok não aceitou uma sequência automática. Verifique o chat; se isso se repetir, desative as sequências automáticas por um tempo."});
+                "Desativado", "Voltar", "Sequências automáticas", "Sequência automática não enviada", "O TikTok não aceitou uma sequência automática. Verifique o chat; se isso se repetir, desative as sequências automáticas por um tempo.", "Recomendações no meu idioma", "Caso contrário, o TikTok escolhe vídeos para o país selecionado", "Modo invisível", "Ocultar visualizações de stories", "O autor não verá você entre os espectadores do story", "Ocultar visitas ao perfil", "Você não aparecerá nas visualizações de perfil dos outros, mesmo com o histórico ativado no TikTok", "Ocultar visualizações de vídeos de quem sigo", "Com o histórico ativado, eles não verão quais vídeos deles você assistiu"});
         TABLES.put("fr", new String[]{
                 "TiktokPatchXposed", "Fil",
                 "Bloquer les publicités", "Dans le fil, au démarrage et dans les autres listes de vidéos",
@@ -167,7 +169,7 @@ final class I18n {
                 "Séries",
                 "Séries automatiques", "Maintient les séries existantes dans les chats privés tant que TikTok est ouvert",
                 "À propos", "Version", "Code source", "Redémarrez TikTok pour appliquer les modifications", "Redémarrer",
-                "Désactivé", "Retour", "Séries automatiques", "Série automatique non envoyée", "TikTok n'a pas accepté une série automatique. Vérifiez la discussion ; si cela se répète, désactivez les séries automatiques pendant un moment."});
+                "Désactivé", "Retour", "Séries automatiques", "Série automatique non envoyée", "TikTok n'a pas accepté une série automatique. Vérifiez la discussion ; si cela se répète, désactivez les séries automatiques pendant un moment.", "Recommandations dans ma langue", "Sinon, TikTok choisit des vidéos pour le pays sélectionné", "Mode invisible", "Masquer les vues de stories", "L'auteur ne vous verra pas parmi les spectateurs de sa story", "Masquer les visites de profil", "Vous n'apparaîtrez pas dans les vues de profil des autres, même avec l'historique activé dans TikTok", "Masquer les vues des vidéos des comptes suivis", "Avec l'historique activé, ils ne verront pas quelles vidéos vous avez regardées"});
         TABLES.put("it", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blocca pubblicità", "Nel feed, all'avvio e in altri elenchi di video",
@@ -188,7 +190,7 @@ final class I18n {
                 "Serie",
                 "Serie automatiche", "Mantiene attive le serie esistenti nelle chat private mentre TikTok è aperto",
                 "Info", "Versione", "Codice sorgente", "Riavvia TikTok per applicare le modifiche", "Riavvia",
-                "Disattivato", "Indietro", "Serie automatiche", "Serie automatica non inviata", "TikTok non ha accettato una serie automatica. Controlla la chat; se succede di nuovo, disattiva le serie automatiche per un po'."});
+                "Disattivato", "Indietro", "Serie automatiche", "Serie automatica non inviata", "TikTok non ha accettato una serie automatica. Controlla la chat; se succede di nuovo, disattiva le serie automatiche per un po'.", "Consigli nella mia lingua", "Altrimenti TikTok sceglie i video per il paese selezionato", "Modalità invisibile", "Nascondi visualizzazioni delle storie", "L'autore non ti vedrà tra gli spettatori della storia", "Nascondi visite al profilo", "Non comparirai nelle visualizzazioni del profilo altrui, anche con la cronologia attiva in TikTok", "Nascondi visualizzazioni dei video di chi segui", "Con la cronologia attiva, non vedranno quali loro video hai guardato"});
         TABLES.put("pl", new String[]{
                 "TiktokPatchXposed", "Kanał",
                 "Blokuj reklamy", "W kanale, przy uruchamianiu i na innych listach filmów",
@@ -209,7 +211,7 @@ final class I18n {
                 "Serie",
                 "Automatyczne serie", "Podtrzymuje istniejące serie w czatach prywatnych, gdy TikTok jest otwarty",
                 "Informacje", "Wersja", "Kod źródłowy", "Uruchom ponownie TikToka, aby zastosować zmiany", "Uruchom ponownie",
-                "Wył.", "Wstecz", "Automatyczne serie", "Automatyczna seria nie została wysłana", "TikTok nie przyjął automatycznej serii. Sprawdź czat; jeśli to się powtarza, wyłącz na jakiś czas automatyczne serie."});
+                "Wył.", "Wstecz", "Automatyczne serie", "Automatyczna seria nie została wysłana", "TikTok nie przyjął automatycznej serii. Sprawdź czat; jeśli to się powtarza, wyłącz na jakiś czas automatyczne serie.", "Rekomendacje w moim języku", "W przeciwnym razie TikTok dobiera filmy pod wybrany kraj", "Tryb niewidzialny", "Ukryj wyświetlenia relacji", "Autor nie zobaczy cię wśród widzów relacji", "Ukryj odwiedziny profili", "Nie pojawisz się w wyświetleniach profilu innych, nawet z włączoną historią w TikToku", "Ukryj wyświetlenia filmów obserwowanych osób", "Przy włączonej historii nie zobaczą, które ich filmy oglądasz"});
         TABLES.put("tr", new String[]{
                 "TiktokPatchXposed", "Akış",
                 "Reklamları engelle", "Akışta, açılışta ve diğer video listelerinde",
@@ -230,7 +232,7 @@ final class I18n {
                 "Seriler",
                 "Otomatik seriler", "TikTok açıkken özel sohbetlerdeki mevcut serileri sürdürür",
                 "Hakkında", "Sürüm", "Kaynak kodu", "Değişiklikleri uygulamak için TikTok'u yeniden başlat", "Yeniden başlat",
-                "Kapalı", "Geri", "Otomatik seriler", "Otomatik seri gönderilmedi", "TikTok otomatik bir seriyi kabul etmedi. Sohbeti kontrol et; tekrar olursa otomatik serileri bir süre kapat."});
+                "Kapalı", "Geri", "Otomatik seriler", "Otomatik seri gönderilmedi", "TikTok otomatik bir seriyi kabul etmedi. Sohbeti kontrol et; tekrar olursa otomatik serileri bir süre kapat.", "Önerileri kendi dilimde göster", "Aksi halde TikTok videoları seçilen ülkeye göre seçer", "Görünmez mod", "Hikâye görüntülemelerini gizle", "Hikâye sahibi seni izleyenler arasında görmez", "Profil ziyaretlerini gizle", "TikTok'ta profil görüntüleme geçmişi açık olsa bile başkalarının listesinde görünmezsin", "Takip ettiklerimin video görüntülemelerini gizle", "Görüntüleme geçmişi açıkken hangi videolarını izlediğini göremezler"});
         TABLES.put("id", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blokir iklan", "Di feed, saat dibuka, dan di daftar video lainnya",
@@ -251,7 +253,7 @@ final class I18n {
                 "Streak",
                 "Streak otomatis", "Menjaga streak yang ada di obrolan pribadi selama TikTok terbuka",
                 "Tentang", "Versi", "Kode sumber", "Mulai ulang TikTok untuk menerapkan perubahan", "Mulai ulang",
-                "Nonaktif", "Kembali", "Streak otomatis", "Streak otomatis tidak terkirim", "TikTok tidak menerima streak otomatis. Periksa obrolan; jika terulang, matikan streak otomatis untuk sementara."});
+                "Nonaktif", "Kembali", "Streak otomatis", "Streak otomatis tidak terkirim", "TikTok tidak menerima streak otomatis. Periksa obrolan; jika terulang, matikan streak otomatis untuk sementara.", "Rekomendasi dalam bahasa saya", "Jika tidak, TikTok memilih video untuk negara yang dipilih", "Mode tak terlihat", "Sembunyikan tontonan cerita", "Pembuat tidak akan melihatmu di antara penonton ceritanya", "Sembunyikan kunjungan profil", "Kamu tidak akan muncul di tampilan profil orang lain, meski riwayatnya aktif di TikTok", "Sembunyikan tontonan video akun yang kuikuti", "Dengan riwayat aktif, mereka tidak akan melihat video mana yang kamu tonton"});
     }
 
     private static volatile String[] current = TABLES.get("en");

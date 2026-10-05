@@ -164,7 +164,7 @@ final class StreakSender {
                     }
                     // A failure callback is terminal, but never proof that retrying is safe.
                     if (args.length == 3) {
-                        RuntimeLog.log("streak send failed: " + reason(args));
+                        if (!confirmed) RuntimeLog.log("streak send failed: " + reason(args));
                         done.countDown();
                     }
                 }
