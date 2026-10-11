@@ -9,7 +9,8 @@ build/
 # Local machine settings
 local.properties
 
-# IDE
+# IDE and assistant tooling
+.claude/
 .idea/
 *.iml
 .vscode/
