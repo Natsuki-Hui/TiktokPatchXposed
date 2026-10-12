@@ -23,8 +23,14 @@ final class AccentColor {
     /** TikTok's icons drawn from pictures: the follow "+" under the avatar is a red and white bitmap. */
     private static final String TUX_ICON = "com.bytedance.tux.drawable.TuxIconDrawable";
 
-    /** Background greys of TikTok's dark theme (pages, sheets, bars). */
-    private static final int[] DARK = {0x121212, 0x161616, 0x161823, 0x181818, 0x1E1E1E};
+    /** Page backgrounds of TikTok's dark theme; they become pure black. */
+    private static final int[] DARK = {0x121212, 0x161616, 0x161823, 0x181818};
+    /**
+     * TikTok's surface grey (sheets, chips, input fields) sits on those pages. It turns almost
+     * black instead, so surfaces stay visible on the black page, as in other AMOLED themes.
+     */
+    private static final int SURFACE = 0x1E1E1E;
+    private static final int AMOLED_SURFACE = 0x151515;
 
     private static volatile int accent;
     private static volatile boolean recolor;
@@ -47,7 +53,9 @@ final class AccentColor {
         // TikTok's design system reads its color tokens straight from the theme into a TypedValue.
         hooks += Hooks.hookAll(Resources.Theme.class, "resolveAttribute", THEME);
         hooks += Hooks.hookAll(android.graphics.drawable.GradientDrawable.class, "setColor", ARGUMENT);
-        hooks += Hooks.hookAll(android.graphics.drawable.GradientDrawable.class, "setStroke", ARGUMENT);
+        // Outlines keep their grey under AMOLED, so bubbles and fields stay visible on black.
+        hooks += Hooks.hookAll(android.graphics.drawable.GradientDrawable.class, "setStroke", OUTLINE_ARGUMENT);
+        hooks += Hooks.hookAll(android.graphics.drawable.GradientDrawable.class, "updateGradientDrawableStroke", OUTLINE);
         hooks += Hooks.hookAll(android.view.View.class, "setBackgroundColor", ARGUMENT);
         hooks += Hooks.hookAll(android.widget.TextView.class, "setTextColor", ARGUMENT);
         RuntimeLog.log("colors: hooks=" + hooks + " accent=" + recolor + " amoled=" + amoled);
@@ -180,19 +188,72 @@ final class AccentColor {
     /** Swaps the brand red in a color argument (an int or a color list) before the call uses it. */
     private static final Hooks.Hook ARGUMENT = new Hooks.Hook() {
         @Override protected void before(Hooks.Call param) {
-            Object[] args = param.args;
-            for (int i = 0; i < args.length; i++) {
-                if (args[i] instanceof Integer && param.method instanceof Method
-                        && ((Method) param.method).getParameterTypes()[i] == int.class) {
-                    int color = (Integer) args[i];
-                    // setStroke(width, color): only the color argument looks like an opaque red.
-                    if (swap(color) != color) args[i] = swap(color);
-                } else if (args[i] instanceof ColorStateList) {
-                    args[i] = swap((ColorStateList) args[i]);
-                }
-            }
+            swapArguments(param);
         }
     };
+
+    private static void swapArguments(Hooks.Call param) {
+        Object[] args = param.args;
+        for (int i = 0; i < args.length; i++) {
+            if (args[i] instanceof Integer && param.method instanceof Method
+                    && ((Method) param.method).getParameterTypes()[i] == int.class) {
+                int color = (Integer) args[i];
+                // setStroke(width, color): only the color argument looks like an opaque red.
+                if (swap(color) != color) args[i] = swap(color);
+            } else if (args[i] instanceof ColorStateList) {
+                args[i] = swap((ColorStateList) args[i]);
+            }
+        }
+    }
+
+    /** Depth of outline code on this thread: shape strokes are read and set while it is above zero. */
+    private static final ThreadLocal<int[]> OUTLINES = ThreadLocal.withInitial(() -> new int[1]);
+
+    private static final Hooks.Hook OUTLINE = new Hooks.Hook() {
+        @Override protected void before(Hooks.Call param) {
+            OUTLINES.get()[0]++;
+        }
+
+        @Override protected void after(Hooks.Call param) {
+            OUTLINES.get()[0]--;
+        }
+    };
+
+    private static final Hooks.Hook OUTLINE_ARGUMENT = new Hooks.Hook() {
+        @Override protected void before(Hooks.Call param) {
+            OUTLINES.get()[0]++;
+            swapArguments(param);
+        }
+
+        @Override protected void after(Hooks.Call param) {
+            OUTLINES.get()[0]--;
+        }
+    };
+
+    private static boolean outline() {
+        return OUTLINES.get()[0] > 0;
+    }
+
+    /**
+     * The AMOLED theme needs TikTok's own dark theme underneath. TikTok keeps that choice in the
+     * "sp_dark_mode" preferences (1 light, 2 dark, -1 like the system) and reads it as each screen
+     * opens, so it is set to dark while the theme is on. The previous choice is kept and put back
+     * when the theme is turned off.
+     */
+    static void applyDarkMode(Context context) {
+        if (context == null) return;
+        android.content.SharedPreferences modes = context.getSharedPreferences("sp_dark_mode", Context.MODE_PRIVATE);
+        String saved = "tpx_saved_dark_mode";
+        if (Prefs.on(Prefs.AMOLED)) {
+            int current = modes.getInt("dark_mode", 1);
+            if (current == 2) return;
+            android.content.SharedPreferences.Editor editor = modes.edit().putInt("dark_mode", 2);
+            if (!modes.contains(saved)) editor.putInt(saved, current);
+            editor.commit();
+        } else if (modes.contains(saved)) {
+            modes.edit().putInt("dark_mode", modes.getInt(saved, 1)).remove(saved).commit();
+        }
+    }
 
     private static final Hooks.Hook THEME = new Hooks.Hook() {
         @Override protected void after(Hooks.Call param) {
@@ -224,6 +285,8 @@ final class AccentColor {
             int color = list.getDefaultColor();
             return swap(color) == color ? list : ColorStateList.valueOf(swap(color));
         }
+        // Outline lists keep their greys, so they are not cached with the background ones.
+        if (outline()) return rebuild(list);
         ColorStateList known = SWAPPED.get(list);
         if (known != null) return known == UNCHANGED ? list : known;
         ColorStateList swapped = rebuild(list);
@@ -270,8 +333,9 @@ final class AccentColor {
     static int swap(int color) {
         int rgb = color & 0xFFFFFF;
         if (recolor && isBrand(rgb)) return (color & 0xFF000000) | accent;
-        if (amoled) {
+        if (amoled && !outline()) {
             for (int dark : DARK) if (rgb == dark) return color & 0xFF000000;
+            if (rgb == SURFACE) return (color & 0xFF000000) | AMOLED_SURFACE;
         }
         return color;
     }

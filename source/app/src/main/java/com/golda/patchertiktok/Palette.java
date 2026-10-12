@@ -22,7 +22,8 @@ final class Palette {
         if (dark) {
             background = 0xFF000000;
             statusBar = 0xFF121212;
-            card = 0xFF1E1E1E;
+            // Not one of TikTok's greys, so the AMOLED theme leaves the cards visible on black.
+            card = 0xFF1C1C1E;
             pressed = 0xFF2C2C2C;
             textPrimary = 0xFFF6F6F6;
             textSecondary = 0xFF999999;

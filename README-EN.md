@@ -2,7 +2,7 @@
 
 [Русский](README.md) | **English**
 
-> Tested on **TikTok 47.1.4** from Google Play and **Android 16**. Most features find what they
+> Tested on **TikTok 47.1.4** (Google Play and universal APK) and the **47.1.16** beta, **Android 16**. Most features find what they
 > need in TikTok on their own, so they survive its updates. If something stops working after a
 > TikTok update, check "Feature status" in the module's settings and report it in
 > [issues](https://github.com/hik0w/TiktokPatchXposed/issues).
@@ -12,7 +12,7 @@ features TikTok only gives to some users, and adds plenty of extras: auto-scroll
 own accent color and an AMOLED theme, hiding parts of the interface, country flags, invisible mode
 and stickers instead of streak flames. All settings live inside TikTok and look native.
 
-Current version: **4.1.0**.
+Current version: **4.1.1**.
 
 ### Test features 🧪
 
@@ -117,7 +117,7 @@ settings: *Feature status → Export / Import settings*.
 | Interface opacity | Buttons, author and caption over videos become see-through |
 | Burn-in protection | For OLED: the buttons shift slightly every minute and, with "Dim the buttons", dim while you don't touch the screen |
 | Own accent color | Replaces TikTok's red: Follow buttons, the "+" under the avatar, badges, unread counters, liked comments. 8 ready colors or your own HEX |
-| AMOLED theme | Pure black instead of dark grey in TikTok's dark theme |
+| AMOLED theme | Pure black instead of dark grey. Turns TikTok's dark theme on by itself and puts your previous theme back when turned off. Buttons, chips and input fields stay visible on black |
 | Hide stories in Inbox | The row of stories above your chats |
 | 🧪 No forced sign-in | Without an account, TikTok doesn't block the app with a sign-in screen |
 
@@ -204,6 +204,16 @@ TikTok's readable class and method names and finds the obfuscated parts itself o
 of a new version (by strings and signatures) — that takes a fraction of a second and the result is
 remembered. So new TikTok versions will most likely work without a module update. This can't be
 guaranteed: a feature that can't be found is skipped and shown in "Feature status".
+
+What else helps it survive updates:
+- **Compressed code.** Some builds (betas, universal APKs) keep TikTok's code compressed inside
+  the APK. The module reads it from the unpacked copy Android makes itself, or, if there is none,
+  unpacks it once after an update and deletes it right away.
+- **Moved classes.** If TikTok moves a class the module needs to another package under the same
+  name, the module finds it by name and remembers it until the next update.
+- **Non-standard installs.** Code is looked up in the files TikTok is actually loaded from, so the
+  module also works in TikTok patched with LSPatch.
+- **Isolation.** Every feature starts on its own: if one can't be found, the others keep working.
 
 The module uses LSPosed's modern API (libxposed 101–102), so new LSPosed versions don't mark it as
 "legacy". Old LSPosed 1.9.x is supported too: the APK keeps the previous entry point for it.

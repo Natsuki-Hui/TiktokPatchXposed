@@ -179,7 +179,8 @@ public final class ModSettingsActivity extends Activity {
             float width = getResources().getDisplayMetrics().widthPixels;
             page.setTranslationX(width);
             page.animate().translationX(0).setDuration(280)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
+                    .withEndAction(() -> page.setTranslationX(0)).start();
             previous.animate().translationX(-width * 0.3f).setDuration(280)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
                     .withEndAction(() -> previous.setVisibility(View.INVISIBLE)).start();
@@ -210,11 +211,26 @@ public final class ModSettingsActivity extends Activity {
         float width = getResources().getDisplayMetrics().widthPixels;
         if (previous != null) {
             previous.setVisibility(View.VISIBLE);
-            previous.animate().translationX(0).setDuration(250).start();
+            previous.animate().translationX(0).setDuration(250).withEndAction(() -> previous.setTranslationX(0)).start();
         }
         page.animate().translationX(width).setDuration(250).withEndAction(() -> stack.removeView(page)).start();
         if (previous != null && previous.getTag() instanceof Runnable) ((Runnable) previous.getTag()).run();
         syncBackCallback();
+    }
+
+    /**
+     * The page on top always sits exactly in place once the screen is back in front: an
+     * interrupted slide (a fast back, the app going to the background) would otherwise leave it
+     * shifted, cutting off its left edge.
+     */
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        View top = pages.peek();
+        if (hasFocus && top != null && top.getAnimation() == null) {
+            top.animate().cancel();
+            top.setTranslationX(0);
+            top.setVisibility(View.VISIBLE);
+        }
     }
 
     /** API 33+ dispatches back through callbacks when the host app opts into predictive back. */
@@ -1297,6 +1313,9 @@ public final class ModSettingsActivity extends Activity {
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setMinimumHeight(dp(56));
         row.setPadding(dp(16), dp(12), dp(16), dp(12));
+        // Icons that pulse or spring past their size (the status dot, a pressed group icon) may
+        // draw over the padding instead of being cut at the content edge.
+        row.setClipToPadding(false);
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(palette.pressed), null,
                 new ColorDrawable(0xFFFFFFFF)));
         row.setClickable(true);

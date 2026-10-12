@@ -59,6 +59,7 @@ final class Module {
             AccentColor.install();
             AccentColor.installFor(app);
             AccentColor.installIcons(loader);
+            AccentColor.applyDarkMode(app);
         });
         run("region", () -> RegionSpoof.install(loader));
         run("privacy", Privacy::install);
@@ -66,8 +67,8 @@ final class Module {
             run("recommendation", () -> Recommendation.install(app, loader));
         }
         if (!main) return;
-        I18n.use(app.getResources().getConfiguration().getLocales().get(0));
-        Discovery.init(app);
+        run("language", () -> I18n.use(app.getResources().getConfiguration().getLocales().get(0)));
+        run("code index", () -> Discovery.init(app));
         run("comment translation", () -> {
             Runnable configure = () -> CommentTranslate.configure(Prefs.on(Prefs.AUTO_TRANSLATE), Prefs.text(Prefs.TRANSLATE_EXCLUDE));
             configure.run();
