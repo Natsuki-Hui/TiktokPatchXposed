@@ -9,6 +9,10 @@ import java.util.List;
 /** Removes ads, LIVE, "people you may know", paid/shop and AI videos, and the user's own filter matches from video lists. */
 final class FeedFilter {
     private static final String SNAPSHOT = "com.golda.patchertiktok.cleanFeed";
+    /** awemeType of the card TikTok makes itself, and cardInsertInfo.cardType of the server one. */
+    private static final int FRIEND_CARD_TYPE = 4004;
+    private static final int FRIEND_CARD_SERVER_TYPE = 49;
+    private static final String FRIEND_CARD_TAG = "friend_recommend_card";
     private static final String[] SUGGESTION_METHODS = {
             "getRelationTextKey", "getRecType", "getFriendTypeStr", "getLabelInfo", "getTabText", "getText", "getKey"};
     private static final String[] SUGGESTION_FIELDS = {
@@ -233,8 +237,53 @@ final class FeedFilter {
         return value instanceof String && expected.equalsIgnoreCase((String) value);
     }
 
+    /** The full-screen "People you may know" card: a TikTok-made item, or a server card of the same kind. */
+    static boolean isFriendCard(Object aweme) {
+        if (aweme == null) return false;
+        Object type = Reflect.call(aweme, "getAwemeType");
+        if (type instanceof Number && ((Number) type).intValue() == FRIEND_CARD_TYPE) return true;
+        Object card = Reflect.call(aweme, "getCardInsertInfo");
+        if (card == null) card = Reflect.get(aweme, "cardInsertInfo");
+        if (card == null) return false;
+        Object cardType = Reflect.call(card, "getCardType");
+        if (!(cardType instanceof Number)) cardType = Reflect.get(card, "cardType");
+        return cardType instanceof Number && ((Number) cardType).intValue() == FRIEND_CARD_SERVER_TYPE;
+    }
+
+    /**
+     * TikTok also adds the card to an already loaded page by itself, without passing through
+     * FeedItemList's setter. The method that does it is found by the tag it gives the card and its
+     * shape (int, String, List, Function0) -> Pair; returning null there is TikTok's own "nothing inserted".
+     * Install after Discovery.init.
+     */
+    static void installCardInsertion(ClassLoader loader) {
+        java.util.Set<String> owners = new java.util.LinkedHashSet<>();
+        for (String hit : Discovery.methodsUsing(FRIEND_CARD_TAG)) owners.add(hit.substring(0, hit.indexOf('#')));
+        int hooked = 0;
+        for (String owner : owners) {
+            Class<?> type = Hooks.findClass(owner, loader);
+            if (type == null) continue;
+            for (Method method : type.getDeclaredMethods()) {
+                Class<?>[] p = method.getParameterTypes();
+                if (p.length != 4 || p[0] != int.class || p[1] != String.class || p[2] != List.class
+                        || !"kotlin.jvm.functions.Function0".equals(p[3].getName())
+                        || !"kotlin.Pair".equals(method.getReturnType().getName())) continue;
+                try {
+                    Hooks.hook(method, new Hooks.Hook() {
+                        @Override protected void before(Hooks.Call param) {
+                            if (Prefs.on(Prefs.ACQUAINTANCES)) param.setResult(null);
+                        }
+                    });
+                    hooked++;
+                } catch (Throwable ignored) { }
+            }
+        }
+        RuntimeLog.log("friend card insertion: " + hooked + " hook(s)");
+    }
+
     private static boolean isSuggestedAcquaintance(Object aweme) {
         if (aweme == null) return false;
+        if (isFriendCard(aweme)) return true;
         Object relation = Reflect.call(aweme, "getRelationRecommendInfo");
         if (relation == null) relation = Reflect.get(aweme, "relationRecommendInfo");
         boolean familiar = Reflect.callBoolean(aweme, "isFamiliar") || Reflect.getBoolean(aweme, "isFamiliar");

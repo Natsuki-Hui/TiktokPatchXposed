@@ -77,6 +77,14 @@ final class Prefs {
     static final String BLOCK_LOCATION = "block_location";
     static final String HIDE_VPN = "hide_vpn";
     static final String SPOOF_ANDROID_ID = "spoof_android_id";
+    /** Play videos TikTok muted over a copyright claim, while their audio is still delivered. */
+    static final String UNMUTE = "unmute_copyright";
+    static final String SELF_REPOST = "self_repost";
+    /** Replace TikTok's interface font: {@link #FONT_SOURCE} is "system" or "file" (a copy in TikTok's files). */
+    static final String FONT = "custom_font";
+    static final String FONT_SOURCE = "custom_font_source";
+    /** Name of the imported font file, shown in settings. */
+    static final String FONT_FILE = "custom_font_file";
     /** The random Android ID shown instead of the real one; made once. */
     static final String ANDROID_ID = "android_id_value";
     /** Languages left untranslated, e.g. "en, uk". */
@@ -87,7 +95,7 @@ final class Prefs {
     static final String DEFAULT_REGION = "de";
 
     /** Keys whose hooks only take effect when TikTok starts. */
-    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID};
+    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID, SELF_REPOST, FONT};
 
     private static final Map<String, Boolean> DEFAULTS = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> FLAGS = new ConcurrentHashMap<>();
@@ -144,6 +152,9 @@ final class Prefs {
         DEFAULTS.put(BLOCK_LOCATION, false);
         DEFAULTS.put(HIDE_VPN, false);
         DEFAULTS.put(SPOOF_ANDROID_ID, false);
+        DEFAULTS.put(UNMUTE, false);
+        DEFAULTS.put(SELF_REPOST, false);
+        DEFAULTS.put(FONT, false);
         // Automated messages are opt-in only.
         DEFAULTS.put(AUTO_STREAK, false);
     }
@@ -163,7 +174,7 @@ final class Prefs {
         region = Regions.normalize(loaded.getString(REGION, DEFAULT_REGION));
         oldVideoDays = Math.max(1, loaded.getInt(OLD_VIDEO_DAYS, DEFAULT_OLD_VIDEO_DAYS));
         for (String key : new String[]{FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE, STREAK_STICKER,
-                STREAK_STICKER_TITLE, ANDROID_ID}) TEXTS.put(key, loaded.getString(key, ""));
+                STREAK_STICKER_TITLE, ANDROID_ID, FONT_SOURCE, FONT_FILE}) TEXTS.put(key, loaded.getString(key, ""));
         for (String key : new String[]{FILTER_MIN_LIKES, FILTER_MIN_VIEWS}) NUMBERS.put(key, loaded.getLong(key, 0));
         NUMBERS.put(ACCENT_COLOR, loaded.getLong(ACCENT_COLOR, DEFAULT_ACCENT));
         NUMBERS.put(OVERLAY_OPACITY, loaded.getLong(OVERLAY_OPACITY, 100));
@@ -292,6 +303,7 @@ final class Prefs {
         StringBuilder value = new StringBuilder(region);
         for (String key : RESTART_KEYS) value.append(on(key) ? '1' : '0');
         if (on(ACCENT)) value.append(number(ACCENT_COLOR));
+        if (on(FONT)) value.append(text(FONT_SOURCE)).append(text(FONT_FILE));
         return value.toString();
     }
 

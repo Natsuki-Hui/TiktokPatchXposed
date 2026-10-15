@@ -1,12 +1,12 @@
 package com.golda.patchertiktok;
 
-import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
@@ -57,6 +57,13 @@ public final class ModSettingsActivity extends Activity {
     private FrameLayout stack;
     private View restartBar;
     private Object backCallback;
+    private FrameLayout root;
+    /** The open bottom sheet's layer, or null. */
+    private FrameLayout sheet;
+    private Object sheetBack;
+    /** Rebuilds the font sheet's rows after a file is picked. */
+    private Runnable fontChanged;
+    private static final int PICK_FONT = 41;
     private int topInset;
     private int bottomInset;
 
@@ -65,20 +72,25 @@ public final class ModSettingsActivity extends Activity {
         super.onCreate(saved);
         Prefs.load(getApplicationContext());
         locale = getResources().getConfiguration().getLocales().get(0);
+        // Debug builds only: README screenshots in another language without changing TikTok's.
+        if (BuildConfig.DEBUG && getIntent().hasExtra(EXTRA + ".LANG")) {
+            locale = Locale.forLanguageTag(getIntent().getStringExtra(EXTRA + ".LANG"));
+        }
         I18n.use(locale);
         boolean dark = getIntent().hasExtra(EXTRA_DARK)
                 ? getIntent().getBooleanExtra(EXTRA_DARK, true)
                 : (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
                 == Configuration.UI_MODE_NIGHT_YES;
-        palette = Palette.of(dark);
+        int accent = Prefs.on(Prefs.ACCENT) ? 0xFF000000 | (int) Prefs.number(Prefs.ACCENT_COLOR) : 0;
+        palette = Palette.settings(dark, dark && Prefs.on(Prefs.AMOLED), accent);
         setupWindow();
 
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(palette.background);
         stack = new FrameLayout(this);
         root.addView(stack, new FrameLayout.LayoutParams(-1, -1));
+        // Each page's toolbar paints the status bar area itself, so the hero glow shows under it.
         View statusScrim = new View(this);
-        statusScrim.setBackgroundColor(palette.statusBar);
         root.addView(statusScrim, new FrameLayout.LayoutParams(-1, 0, Gravity.TOP));
         restartBar = restartBar();
         FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
@@ -137,7 +149,8 @@ public final class ModSettingsActivity extends Activity {
     @SuppressWarnings("deprecation")
     @android.annotation.SuppressLint("GestureBackNavigation")
     public void onBackPressed() {
-        if (pages.size() > 1) pop();
+        if (sheet != null) closeSheet();
+        else if (pages.size() > 1) pop();
         else super.onBackPressed();
     }
 
@@ -169,53 +182,121 @@ public final class ModSettingsActivity extends Activity {
 
     // ---- navigation ------------------------------------------------------------------------
 
+    /**
+     * Opens a page with a shared-axis transition: the new page comes in a little from the right
+     * while it fades in, and the old one drifts a little to the left as it fades out. Short and
+     * quiet, because settings pages are opened many times a session.
+     */
     private void push(View page, boolean animate) {
         View previous = pages.peek();
         pages.push(page);
         stack.addView(page, new FrameLayout.LayoutParams(-1, -1));
         applyInsets(page);
-        reveal(page);
-        if (animate && previous != null) {
-            float width = getResources().getDisplayMetrics().widthPixels;
-            page.setTranslationX(width);
-            page.animate().translationX(0).setDuration(280)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
-                    .withEndAction(() -> page.setTranslationX(0)).start();
-            previous.animate().translationX(-width * 0.3f).setDuration(280)
-                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f))
-                    .withEndAction(() -> previous.setVisibility(View.INVISIBLE)).start();
+        if (previous == null) {
+            reveal(page);
+        } else if (animate && motion()) {
+            axis(page, previous, true, 0f, null);
+        } else {
+            previous.setVisibility(View.INVISIBLE);
         }
         syncBackCallback();
     }
 
-    /** Cards slide up one after another, as the page appears. */
+    /** The first page's rows rise in one after another, once per opening of the settings. */
     private void reveal(View page) {
+        if (!motion()) return;
         Object holder = page.getTag(R_ID_CONTENT);
         if (!(holder instanceof LinearLayout)) return;
         LinearLayout content = (LinearLayout) holder;
         int shown = 0;
-        for (int index = 0; index < content.getChildCount(); index++) {
+        for (int index = 0; index < content.getChildCount() && shown < 6; index++) {
             View child = content.getChildAt(index);
             if (child.getVisibility() != View.VISIBLE) continue;
             child.setAlpha(0f);
-            child.setTranslationY(dp(18));
-            child.animate().alpha(1f).translationY(0).setStartDelay(60L + 40L * Math.min(shown++, 8))
-                    .setDuration(340).setInterpolator(EASE).start();
+            child.setTranslationY(dp(6));
+            child.animate().alpha(1f).translationY(0).setStartDelay(20L * shown++)
+                    .setDuration(200).setInterpolator(EASE).start();
         }
     }
 
     private void pop() {
+        if (pages.size() < 2) return;
         View page = pages.pop();
         View previous = pages.peek();
         hideKeyboard(page);
-        float width = getResources().getDisplayMetrics().widthPixels;
-        if (previous != null) {
-            previous.setVisibility(View.VISIBLE);
-            previous.animate().translationX(0).setDuration(250).withEndAction(() -> previous.setTranslationX(0)).start();
+        if (previous.getTag() instanceof Runnable) ((Runnable) previous.getTag()).run();
+        previous.setVisibility(View.VISIBLE);
+        Runnable done = () -> {
+            stack.removeView(page);
+            restore(previous);
+        };
+        if (motion()) {
+            // Starts from wherever a predictive back gesture has already taken the pages.
+            axis(page, previous, false, Math.abs(page.getTranslationX()) / (float) dp(SHIFT_DP), done);
+        } else {
+            done.run();
         }
-        page.animate().translationX(width).setDuration(250).withEndAction(() -> stack.removeView(page)).start();
-        if (previous != null && previous.getTag() instanceof Runnable) ((Runnable) previous.getTag()).run();
         syncBackCallback();
+    }
+
+    /** How far, in dp, a page travels in the shared-axis transition. */
+    private static final int SHIFT_DP = 32;
+
+    /** Whether the system lets apps animate; with animations off pages simply appear. */
+    private static boolean motion() {
+        return ValueAnimator.areAnimatorsEnabled();
+    }
+
+    /**
+     * One shared-axis step between {@code page} (on top) and {@code previous}. At {@code t = 1}
+     * the top page is in place and the previous one gone; at 0 the reverse. Entering takes
+     * 240 ms, leaving 180 ms: the system answering is faster than the user arriving.
+     */
+    private void axis(View page, View previous, boolean in, float startOffset, Runnable end) {
+        float shift = dp(SHIFT_DP);
+        float from = in ? 0f : 1f - Math.min(1f, startOffset);
+        ValueAnimator animator = ValueAnimator.ofFloat(from, in ? 1f : 0f);
+        animator.setDuration(in ? 240 : 180);
+        animator.setInterpolator(EASE);
+        animator.addUpdateListener(animation -> {
+            float t = (float) animation.getAnimatedValue();
+            page.setTranslationX(shift * (1f - t));
+            page.setAlpha(clamp(t * 1.4f - 0.2f));
+            previous.setTranslationX(-shift * 0.5f * t);
+            previous.setAlpha(1f - clamp(t * 1.6f));
+        });
+        animator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(android.animation.Animator animation) {
+                if (in) {
+                    restore(page);
+                    previous.setVisibility(View.INVISIBLE);
+                }
+                if (end != null) end.run();
+            }
+        });
+        animator.start();
+    }
+
+    private void restore(View page) {
+        page.animate().cancel();
+        page.setScaleX(1f);
+        page.setScaleY(1f);
+        page.setAlpha(1f);
+        page.setTranslationX(0);
+        page.setTranslationY(0);
+        page.setVisibility(View.VISIBLE);
+    }
+
+    private static float lerp(float from, float to, float t) { return from + (to - from) * t; }
+
+    private static float clamp(float value) { return Math.max(0f, Math.min(1f, value)); }
+
+    static int blend(int from, int to, float amount) {
+        int a = (int) (((from >>> 24) & 255) + (((to >>> 24) & 255) - ((from >>> 24) & 255)) * amount);
+        int r = (int) (((from >> 16) & 255) + (((to >> 16) & 255) - ((from >> 16) & 255)) * amount);
+        int g = (int) (((from >> 8) & 255) + (((to >> 8) & 255) - ((from >> 8) & 255)) * amount);
+        int b = (int) ((from & 255) + ((to & 255) - (from & 255)) * amount);
+        return (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     /**
@@ -233,18 +314,65 @@ public final class ModSettingsActivity extends Activity {
         }
     }
 
-    /** API 33+ dispatches back through callbacks when the host app opts into predictive back. */
+    /**
+     * API 33+ dispatches back through callbacks when the host app opts into predictive back. On
+     * 34+ the page follows the gesture along the same axis a pop uses, and a release either
+     * finishes the pop from there or settles back.
+     */
     private void syncBackCallback() {
         if (Build.VERSION.SDK_INT < 33) return;
         android.window.OnBackInvokedDispatcher dispatcher = getOnBackInvokedDispatcher();
         if (pages.size() > 1 && backCallback == null) {
-            android.window.OnBackInvokedCallback callback = this::pop;
+            android.window.OnBackInvokedCallback callback = Build.VERSION.SDK_INT >= 34 ? predictiveBack() : this::pop;
             dispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, callback);
             backCallback = callback;
         } else if (pages.size() <= 1 && backCallback != null) {
             dispatcher.unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback) backCallback);
             backCallback = null;
         }
+    }
+
+    @android.annotation.TargetApi(34)
+    private android.window.OnBackInvokedCallback predictiveBack() {
+        return new android.window.OnBackAnimationCallback() {
+            @Override public void onBackStarted(android.window.BackEvent event) {
+                View previous = previousPage();
+                if (previous != null) previous.setVisibility(View.VISIBLE);
+            }
+
+            @Override public void onBackProgressed(android.window.BackEvent event) {
+                View page = pages.peek();
+                View previous = previousPage();
+                if (page == null || previous == null || !motion()) return;
+                // The same shared axis as a pop, run by the finger: up to half of the way, so
+                // a release still has a visible last step to finish.
+                float t = 1f - 0.5f * event.getProgress();
+                float shift = dp(SHIFT_DP);
+                page.setTranslationX(shift * (1f - t));
+                page.setAlpha(clamp(t * 1.4f - 0.2f));
+                previous.setTranslationX(-shift * 0.5f * t);
+                previous.setAlpha(1f - clamp(t * 1.6f));
+            }
+
+            @Override public void onBackInvoked() { pop(); }
+
+            @Override public void onBackCancelled() {
+                View page = pages.peek();
+                View previous = previousPage();
+                if (page != null) page.animate().translationX(0).alpha(1f).setDuration(180).setInterpolator(EASE).start();
+                if (previous != null) {
+                    previous.animate().translationX(-dp(SHIFT_DP) * 0.5f).alpha(0f).setDuration(180).setInterpolator(EASE)
+                            .withEndAction(() -> previous.setVisibility(View.INVISIBLE)).start();
+                }
+            }
+        };
+    }
+
+    private View previousPage() {
+        if (pages.size() < 2) return null;
+        java.util.Iterator<View> iterator = pages.iterator();
+        iterator.next();
+        return iterator.next();
     }
 
     private void applyInsets(View page) {
@@ -256,8 +384,17 @@ public final class ModSettingsActivity extends Activity {
 
     private static final int R_ID_INSETS = 0x7f0b0001;
     private static final int R_ID_CONTENT = 0x7f0b0002;
+    private static final int R_ID_ORIGIN = 0x7f0b0003;
+    private static final int R_ID_SHAPE = 0x7f0b0004;
+    /** Strong ease-out: movement starts at once and settles softly. */
     private static final android.view.animation.Interpolator EASE =
             new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f);
+    /** The iOS-like drawer curve, cubic-bezier(0.32, 0.72, 0, 1): a page grows out of its tile. */
+    private static final android.view.animation.Interpolator OPEN =
+            new android.view.animation.PathInterpolator(0.32f, 0.72f, 0f, 1f);
+    /** Even quicker start, for press feedback. */
+    private static final android.view.animation.Interpolator PRESS =
+            new android.view.animation.PathInterpolator(0.23f, 1f, 0.32f, 1f);
     private static final int[] AGE_DAYS = {7, 30, 90, 180, 365, 730};
     private static final S[] AGE_NAMES = {S.AGE_WEEK, S.AGE_MONTH, S.AGE_3_MONTHS, S.AGE_6_MONTHS, S.AGE_YEAR, S.AGE_2_YEARS};
 
@@ -265,14 +402,16 @@ public final class ModSettingsActivity extends Activity {
 
     /** A group of settings with its own page; the main page lists the groups. */
     private enum Category {
-        FEED(S.SECTION_FEED, Glyph.Kind.FEED, 0xFFFE2C55),
+        // Not TikTok's brand red: the accent hooks would repaint that to the user's accent.
+        FEED(S.SECTION_FEED, Glyph.Kind.FEED, 0xFFF0535B),
         PLAYBACK(S.SECTION_PLAYBACK, Glyph.Kind.PLAY, 0xFF8B5CF6),
         INTERFACE(S.SECTION_INTERFACE, Glyph.Kind.PALETTE, 0xFF14B8A6),
         SOCIAL(S.SECTION_SOCIAL, Glyph.Kind.COMMENT, 0xFFFF9F0A),
         SHARING(S.SECTION_SHARING, Glyph.Kind.DOWNLOAD, 0xFF2BB673),
+        GHOST(S.SECTION_PRIVACY, Glyph.Kind.GHOST, 0xFF6B7280),
         REGION(S.SECTION_REGION, Glyph.Kind.GLOBE, 0xFF1FA2FF),
-        GHOST(S.SECTION_GHOST, Glyph.Kind.GHOST, 0xFF6B7280),
-        STREAKS(S.SECTION_STREAKS, Glyph.Kind.FLAME, 0xFFFF6A2B);
+        STREAKS(S.SECTION_STREAKS, Glyph.Kind.FLAME, 0xFFFF6A2B),
+        LAB(S.SECTION_LAB, Glyph.Kind.FLASK, 0xFF6B7280);
 
         final S title;
         final Glyph.Kind icon;
@@ -288,12 +427,15 @@ public final class ModSettingsActivity extends Activity {
     /** A plain switch; listed on its group's page and found by the search on the main page. */
     private static final class Setting {
         final Category category;
+        /** The heading of the card this switch sits in on its page; null for a page with one card. */
+        final S group;
         final S title;
         final S description;
         final String key;
 
-        Setting(Category category, S title, S description, String key) {
+        Setting(Category category, S group, S title, S description, String key) {
             this.category = category;
+            this.group = group;
             this.title = title;
             this.description = description;
             this.key = key;
@@ -301,58 +443,55 @@ public final class ModSettingsActivity extends Activity {
     }
 
     private static final Setting[] SETTINGS = {
-            new Setting(Category.FEED, S.ADS, S.ADS_DESC, Prefs.ADS),
-            new Setting(Category.FEED, S.LIVE, S.LIVE_DESC, Prefs.LIVE),
-            new Setting(Category.FEED, S.ACQUAINTANCES, S.ACQUAINTANCES_DESC, Prefs.ACQUAINTANCES),
-            new Setting(Category.FEED, S.SEEKBAR, S.SEEKBAR_DESC, Prefs.SEEKBAR),
-            new Setting(Category.FEED, S.PROMO, S.PROMO_DESC, Prefs.PROMO),
-            new Setting(Category.FEED, S.AI_CONTENT, S.AI_CONTENT_DESC, Prefs.AI_CONTENT),
-            new Setting(Category.FEED, S.CUSTOM_FILTER, S.CUSTOM_FILTER_DESC, Prefs.CUSTOM_FILTER),
-            new Setting(Category.PLAYBACK, S.REMEMBER_CLEAN, S.REMEMBER_CLEAN_DESC, Prefs.REMEMBER_CLEAN),
-            new Setting(Category.PLAYBACK, S.RESUME_POSITION, S.RESUME_POSITION_DESC, Prefs.RESUME_POSITION),
-            new Setting(Category.PLAYBACK, S.AUTO_SCROLL, S.AUTO_SCROLL_DESC, Prefs.AUTO_SCROLL),
-            new Setting(Category.PLAYBACK, S.REMEMBER_SPEED, S.REMEMBER_SPEED_DESC, Prefs.REMEMBER_SPEED),
-            new Setting(Category.INTERFACE, S.HIDE_INBOX_STORIES, S.HIDE_INBOX_STORIES_DESC, Prefs.HIDE_INBOX_STORIES),
-            new Setting(Category.INTERFACE, S.BURN_IN, S.BURN_IN_DESC, Prefs.BURN_IN),
-            new Setting(Category.INTERFACE, S.ACCENT, S.ACCENT_DESC, Prefs.ACCENT),
-            new Setting(Category.INTERFACE, S.AMOLED, S.AMOLED_DESC, Prefs.AMOLED),
-            new Setting(Category.INTERFACE, S.NO_LOGIN_WALL, S.NO_LOGIN_WALL_DESC, Prefs.NO_LOGIN_WALL),
-            new Setting(Category.SOCIAL, S.COMMENT_REPOSTS, S.COMMENT_REPOSTS_DESC, Prefs.COMMENT_REPOSTS),
-            new Setting(Category.SOCIAL, S.NEW_PROFILE, S.NEW_PROFILE_DESC, Prefs.NEW_PROFILE),
-            new Setting(Category.SOCIAL, S.EXTRA_FEATURES, S.EXTRA_FEATURES_DESC, Prefs.EXTRA_FEATURES),
-            new Setting(Category.SOCIAL, S.COPY_COMMENT, S.COPY_COMMENT_DESC, Prefs.COPY_COMMENT_TEXT),
-            new Setting(Category.SOCIAL, S.AUTHOR_REGION, S.AUTHOR_REGION_DESC, Prefs.AUTHOR_REGION),
-            new Setting(Category.SOCIAL, S.AUTO_TRANSLATE, S.AUTO_TRANSLATE_DESC, Prefs.AUTO_TRANSLATE),
-            new Setting(Category.SHARING, S.NO_WATERMARK, null, Prefs.NO_WATERMARK),
-            new Setting(Category.SHARING, S.DOWNLOAD_ANY, S.DOWNLOAD_ANY_DESC, Prefs.DOWNLOAD_ANY),
-            new Setting(Category.SHARING, S.QUALITY_PICKER, S.QUALITY_PICKER_DESC, Prefs.QUALITY_PICKER),
-            new Setting(Category.SHARING, S.SAVE_ALL_PHOTOS, S.SAVE_ALL_PHOTOS_DESC, Prefs.SAVE_ALL_PHOTOS),
-            new Setting(Category.SHARING, S.COMMENT_MEDIA, S.COMMENT_MEDIA_DESC, Prefs.COMMENT_MEDIA),
-            new Setting(Category.SHARING, S.SCREENSHOTS, S.SCREENSHOTS_DESC, Prefs.SCREENSHOTS),
-            new Setting(Category.SHARING, S.CLEAN_LINKS, S.CLEAN_LINKS_DESC, Prefs.CLEAN_LINKS),
-            new Setting(Category.SHARING, S.EXTERNAL_BROWSER, S.EXTERNAL_BROWSER_DESC, Prefs.EXTERNAL_BROWSER),
-            new Setting(Category.REGION, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE),
-            new Setting(Category.REGION, S.OLD_VIDEOS, S.OLD_VIDEOS_DESC, Prefs.OLD_VIDEOS),
-            new Setting(Category.GHOST, S.GHOST_STORIES, S.GHOST_STORIES_DESC, Prefs.GHOST_STORIES),
-            new Setting(Category.GHOST, S.GHOST_PROFILE, S.GHOST_PROFILE_DESC, Prefs.GHOST_PROFILE),
-            new Setting(Category.GHOST, S.GHOST_POSTS, S.GHOST_POSTS_DESC, Prefs.GHOST_POSTS),
-            new Setting(Category.GHOST, S.BLOCK_LOCATION, S.BLOCK_LOCATION_DESC, Prefs.BLOCK_LOCATION),
-            new Setting(Category.GHOST, S.HIDE_VPN, S.HIDE_VPN_DESC, Prefs.HIDE_VPN),
-            new Setting(Category.GHOST, S.SPOOF_ANDROID_ID, S.SPOOF_ANDROID_ID_DESC, Prefs.SPOOF_ANDROID_ID),
-            new Setting(Category.STREAKS, S.AUTO_STREAK, S.AUTO_STREAK_DESC, Prefs.AUTO_STREAK),
+            new Setting(Category.FEED, S.GROUP_REMOVE, S.ADS, S.ADS_DESC, Prefs.ADS),
+            new Setting(Category.FEED, S.GROUP_REMOVE, S.LIVE, S.LIVE_DESC, Prefs.LIVE),
+            new Setting(Category.FEED, S.GROUP_REMOVE, S.ACQUAINTANCES, S.ACQUAINTANCES_DESC, Prefs.ACQUAINTANCES),
+            new Setting(Category.FEED, S.GROUP_REMOVE, S.PROMO, S.PROMO_DESC, Prefs.PROMO),
+            new Setting(Category.FEED, S.GROUP_FILTERS, S.AI_CONTENT, S.AI_CONTENT_DESC, Prefs.AI_CONTENT),
+            new Setting(Category.FEED, S.GROUP_FILTERS, S.OLD_VIDEOS, S.OLD_VIDEOS_DESC, Prefs.OLD_VIDEOS),
+            new Setting(Category.FEED, S.GROUP_FILTERS, S.CUSTOM_FILTER, S.CUSTOM_FILTER_DESC, Prefs.CUSTOM_FILTER),
+            new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.AUTO_SCROLL, S.AUTO_SCROLL_DESC, Prefs.AUTO_SCROLL),
+            new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.REMEMBER_SPEED, S.REMEMBER_SPEED_DESC, Prefs.REMEMBER_SPEED),
+            new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.RESUME_POSITION, S.RESUME_POSITION_DESC, Prefs.RESUME_POSITION),
+            new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.UNMUTE, S.UNMUTE_DESC, Prefs.UNMUTE),
+            new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.REMEMBER_CLEAN, S.REMEMBER_CLEAN_DESC, Prefs.REMEMBER_CLEAN),
+            new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.SEEKBAR, S.SEEKBAR_DESC, Prefs.SEEKBAR),
+            new Setting(Category.INTERFACE, S.GROUP_COLORS, S.ACCENT, S.ACCENT_DESC, Prefs.ACCENT),
+            new Setting(Category.INTERFACE, S.GROUP_COLORS, S.AMOLED, S.AMOLED_DESC, Prefs.AMOLED),
+            new Setting(Category.INTERFACE, S.GROUP_SCREEN, S.BURN_IN, S.BURN_IN_DESC, Prefs.BURN_IN),
+            new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.NEW_PROFILE, S.NEW_PROFILE_DESC, Prefs.NEW_PROFILE),
+            new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.HIDE_INBOX_STORIES, S.HIDE_INBOX_STORIES_DESC, Prefs.HIDE_INBOX_STORIES),
+            new Setting(Category.SOCIAL, null, S.COPY_COMMENT, S.COPY_COMMENT_DESC, Prefs.COPY_COMMENT_TEXT),
+            new Setting(Category.SOCIAL, null, S.AUTO_TRANSLATE, S.AUTO_TRANSLATE_DESC, Prefs.AUTO_TRANSLATE),
+            new Setting(Category.SOCIAL, null, S.COMMENT_REPOSTS, S.COMMENT_REPOSTS_DESC, Prefs.COMMENT_REPOSTS),
+            new Setting(Category.SOCIAL, null, S.SELF_REPOST, S.SELF_REPOST_DESC, Prefs.SELF_REPOST),
+            new Setting(Category.SOCIAL, null, S.AUTHOR_REGION, S.AUTHOR_REGION_DESC, Prefs.AUTHOR_REGION),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.NO_WATERMARK, null, Prefs.NO_WATERMARK),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.DOWNLOAD_ANY, S.DOWNLOAD_ANY_DESC, Prefs.DOWNLOAD_ANY),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.QUALITY_PICKER, S.QUALITY_PICKER_DESC, Prefs.QUALITY_PICKER),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.SAVE_ALL_PHOTOS, S.SAVE_ALL_PHOTOS_DESC, Prefs.SAVE_ALL_PHOTOS),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.COMMENT_MEDIA, S.COMMENT_MEDIA_DESC, Prefs.COMMENT_MEDIA),
+            new Setting(Category.SHARING, S.GROUP_LINKS, S.CLEAN_LINKS, S.CLEAN_LINKS_DESC, Prefs.CLEAN_LINKS),
+            new Setting(Category.SHARING, S.GROUP_LINKS, S.EXTERNAL_BROWSER, S.EXTERNAL_BROWSER_DESC, Prefs.EXTERNAL_BROWSER),
+            new Setting(Category.SHARING, S.GROUP_LINKS, S.SCREENSHOTS, S.SCREENSHOTS_DESC, Prefs.SCREENSHOTS),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_STORIES, S.GHOST_STORIES_DESC, Prefs.GHOST_STORIES),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_PROFILE, S.GHOST_PROFILE_DESC, Prefs.GHOST_PROFILE),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_POSTS, S.GHOST_POSTS_DESC, Prefs.GHOST_POSTS),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.BLOCK_LOCATION, S.BLOCK_LOCATION_DESC, Prefs.BLOCK_LOCATION),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.HIDE_VPN, S.HIDE_VPN_DESC, Prefs.HIDE_VPN),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.SPOOF_ANDROID_ID, S.SPOOF_ANDROID_ID_DESC, Prefs.SPOOF_ANDROID_ID),
+            new Setting(Category.REGION, null, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE),
+            new Setting(Category.STREAKS, null, S.AUTO_STREAK, S.AUTO_STREAK_DESC, Prefs.AUTO_STREAK),
+            new Setting(Category.LAB, null, S.EXTRA_FEATURES, S.EXTRA_FEATURES_DESC, Prefs.EXTRA_FEATURES),
+            new Setting(Category.LAB, null, S.NO_LOGIN_WALL, S.NO_LOGIN_WALL_DESC, Prefs.NO_LOGIN_WALL),
     };
 
     private View mainPage() {
         Page page = new Page(I18n.get(S.APP_NAME), true);
-        TextView greeting = new TextView(this);
-        greeting.setText(I18n.get(S.GREETING));
-        greeting.setTextColor(palette.textSecondary);
-        greeting.setTextSize(16);
-        greeting.setTypeface(Fonts.regular(this));
-        greeting.setPadding(dp(32), 0, dp(32), dp(16));
-        page.content.addView(greeting);
         LinearLayout status = page.card();
         TextView statusDetail = statusRow(status);
+        Runnable counter = counter(page.content);
+        quickTiles(page.content);
 
         EditText search = searchBox(page.content);
         LinearLayout groups = new LinearLayout(this);
@@ -365,7 +504,7 @@ public final class ModSettingsActivity extends Activity {
 
         LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, dp(12));
         LinearLayout list = card(groups);
-        List<TextView> counters = new ArrayList<>();
+        List<Runnable> counters = new ArrayList<>();
         for (Category category : Category.values()) counters.add(categoryRow(list, category));
         groups.addView(new View(this), gap);
         LinearLayout about = card(groups);
@@ -397,11 +536,189 @@ public final class ModSettingsActivity extends Activity {
         });
         page.root.setTag((Runnable) () -> {
             statusDetail.setText(statusText());
-            for (int index = 0; index < counters.size(); index++) {
-                counters.get(index).setText(categorySummary(Category.values()[index]));
-            }
+            counter.run();
+            for (Runnable refresh : counters) refresh.run();
         });
         return page.root;
+    }
+
+    private int enabledCount() {
+        int enabled = 0;
+        for (Setting setting : SETTINGS) if (Prefs.on(setting.key)) enabled++;
+        return enabled;
+    }
+
+    /**
+     * The hero: how many of the module's switches are on, as a large number with a thin bar
+     * under it. The number counts up once when the settings open; that is the screen's one
+     * moment of delight, and it is seen once per visit, not per tap.
+     */
+    private Runnable counter(LinearLayout content) {
+        int total = SETTINGS.length;
+        TextView number = new TextView(this) {
+            @Override public void setText(CharSequence text, BufferType type) {
+                // The total after the slash stays quieter than the count itself.
+                String value = text == null ? "" : text.toString();
+                int slash = value.indexOf('/');
+                if (slash < 0) {
+                    super.setText(text, type);
+                    return;
+                }
+                android.text.SpannableString styled = new android.text.SpannableString(value);
+                styled.setSpan(new android.text.style.ForegroundColorSpan(palette.textTertiary), slash, value.length(), 0);
+                styled.setSpan(new android.text.style.RelativeSizeSpan(0.5f), slash, value.length(), 0);
+                super.setText(styled, BufferType.SPANNABLE);
+            }
+        };
+        number.setTextColor(palette.textPrimary);
+        number.setTextSize(56);
+        number.setLetterSpacing(-0.04f);
+        number.setTypeface(Fonts.bold(this));
+        number.setFontFeatureSettings("tnum");
+        number.setIncludeFontPadding(false);
+        LinearLayout.LayoutParams numberParams = new LinearLayout.LayoutParams(-2, -2);
+        numberParams.setMargins(dp(24), dp(22), dp(24), dp(4));
+        content.addView(number, numberParams);
+        TextView caption = new TextView(this);
+        caption.setTextColor(palette.textSecondary);
+        caption.setTextSize(13.5f);
+        caption.setTypeface(Fonts.regular(this));
+        caption.setPadding(dp(26), 0, dp(26), dp(10));
+        content.addView(caption);
+        View track = new View(this);
+        track.setBackground(rounded(palette.trackOff, dp(2)));
+        FrameLayout bar = new FrameLayout(this);
+        bar.addView(track, new FrameLayout.LayoutParams(-1, dp(3)));
+        View fill = new View(this);
+        fill.setBackground(rounded(palette.trackOn, dp(2)));
+        fill.setPivotX(0);
+        bar.addView(fill, new FrameLayout.LayoutParams(-1, dp(3)));
+        LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(-1, dp(3));
+        barParams.setMargins(dp(26), 0, dp(26), dp(22));
+        content.addView(bar, barParams);
+
+        Runnable show = () -> {
+            int enabled = enabledCount();
+            number.setText(enabled + "/" + total);
+            caption.setText(String.format(locale, I18n.get(S.ENABLED_COUNT), enabled, total));
+            fill.setScaleX(enabled / (float) total);
+        };
+        show.run();
+        if (motion()) {
+            int enabled = enabledCount();
+            ValueAnimator count = ValueAnimator.ofFloat(0f, 1f);
+            count.setDuration(700);
+            count.setStartDelay(120);
+            count.setInterpolator(EASE);
+            count.addUpdateListener(animation -> {
+                float t = (float) animation.getAnimatedValue();
+                number.setText(Math.round(enabled * t) + "/" + total);
+                fill.setScaleX(enabled * t / total);
+            });
+            number.setText("0/" + total);
+            fill.setScaleX(0f);
+            count.start();
+        }
+        return show;
+    }
+
+    /** The four switches people reach for most, as tiles: filled when on, a tap flips them. */
+    private void quickTiles(LinearLayout content) {
+        Object[][] tiles = {
+                {S.ADS, Glyph.Kind.FEED, new String[] {Prefs.ADS}},
+                {S.NO_WATERMARK, Glyph.Kind.DOWNLOAD, new String[] {Prefs.NO_WATERMARK}},
+                {S.AUTO_SCROLL, Glyph.Kind.SCROLL, new String[] {Prefs.AUTO_SCROLL}},
+                {S.SECTION_GHOST, Glyph.Kind.GHOST, new String[] {Prefs.GHOST_STORIES, Prefs.GHOST_PROFILE, Prefs.GHOST_POSTS}},
+        };
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams gridParams = new LinearLayout.LayoutParams(-1, -2);
+        gridParams.setMargins(dp(16), 0, dp(16), dp(4));
+        content.addView(grid, gridParams);
+        LinearLayout line = null;
+        for (int index = 0; index < tiles.length; index++) {
+            if (index % 2 == 0) {
+                line = new LinearLayout(this);
+                LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(-1, -2);
+                if (index > 0) lineParams.topMargin = dp(8);
+                grid.addView(line, lineParams);
+            }
+            View tile = quickTile((S) tiles[index][0], (Glyph.Kind) tiles[index][1], (String[]) tiles[index][2]);
+            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, dp(92), 1);
+            if (index % 2 == 1) tileParams.setMarginStart(dp(8));
+            line.addView(tile, tileParams);
+        }
+    }
+
+    private View quickTile(S title, Glyph.Kind kind, String[] keys) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(14), dp(14), dp(14), dp(12));
+        tile.setClickable(true);
+        tile.setFocusable(true);
+        ImageView icon = new ImageView(this);
+        tile.addView(icon, new LinearLayout.LayoutParams(dp(22), dp(22)));
+        View space = new View(this);
+        tile.addView(space, new LinearLayout.LayoutParams(0, 0, 1));
+        TextView label = new TextView(this);
+        label.setText(I18n.get(title));
+        label.setTextSize(14);
+        label.setTypeface(Fonts.semibold(this));
+        label.setMaxLines(2);
+        label.setEllipsize(TextUtils.TruncateAt.END);
+        tile.addView(label);
+        GradientDrawable fill = rounded(palette.card, dp(18));
+        tile.setBackground(new RippleDrawable(ColorStateList.valueOf(palette.dark ? 0x22FFFFFF : 0x22000000), fill, null));
+        tile.setContentDescription(I18n.get(title));
+        float[] state = {on(keys) ? 1f : 0f};
+        Runnable paint = () -> {
+            int background = blend(palette.card, palette.trackOn, state[0]);
+            int ink = blend(palette.textPrimary, palette.trackOn == palette.textPrimary ? palette.background : 0xFFFFFFFF, state[0]);
+            fill.setColor(background);
+            label.setTextColor(ink);
+            icon.setImageDrawable(new Glyph(kind, blend(palette.textSecondary, ink, state[0]), dp(22)));
+        };
+        paint.run();
+        tile.setOnClickListener(view -> {
+            boolean value = !on(keys);
+            for (String key : keys) Prefs.set(key, value);
+            if (Build.VERSION.SDK_INT >= 34) {
+                view.performHapticFeedback(value ? android.view.HapticFeedbackConstants.TOGGLE_ON
+                        : android.view.HapticFeedbackConstants.TOGGLE_OFF);
+            } else {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            }
+            float from = state[0];
+            float to = value ? 1f : 0f;
+            if (!motion()) {
+                state[0] = to;
+                paint.run();
+                return;
+            }
+            ValueAnimator flip = ValueAnimator.ofFloat(from, to);
+            flip.setDuration(180);
+            flip.setInterpolator(EASE);
+            flip.addUpdateListener(animation -> {
+                state[0] = (float) animation.getAnimatedValue();
+                paint.run();
+            });
+            flip.start();
+        });
+        tile.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override
+            public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName("android.widget.Switch");
+                info.setCheckable(true);
+                info.setChecked(on(keys));
+            }
+        });
+        return tile;
+    }
+
+    private static boolean on(String[] keys) {
+        for (String key : keys) if (!Prefs.on(key)) return false;
+        return true;
     }
 
     /** First card on the main page: the module is running, with the TikTok build and region it runs with. */
@@ -415,21 +732,10 @@ public final class ModSettingsActivity extends Activity {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
         circle.setColor(FeatureStatus.problems() == 0 ? 0xFF2BB673 : 0xFFFF9F0A);
+        // The one colored mark on the page, because it states a real condition. It stays still.
         dot.setBackground(circle);
-        ObjectAnimator breathe = ObjectAnimator.ofPropertyValuesHolder(dot,
-                PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.35f),
-                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.35f),
-                PropertyValuesHolder.ofFloat(View.ALPHA, 1f, 0.55f));
-        breathe.setDuration(1300);
-        breathe.setRepeatCount(ValueAnimator.INFINITE);
-        breathe.setRepeatMode(ValueAnimator.REVERSE);
-        breathe.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
-        dot.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
-            @Override public void onViewAttachedToWindow(View view) { breathe.start(); }
-            @Override public void onViewDetachedFromWindow(View view) { breathe.cancel(); }
-        });
-        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dp(10), dp(10));
-        dotParams.setMarginEnd(dp(14));
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(dp(7), dp(7));
+        dotParams.setMarginEnd(dp(12));
         row.addView(dot, dotParams);
         LinearLayout texts = texts(row, I18n.get(S.STATUS_ACTIVE), statusText());
         ImageView chevron = new ImageView(this);
@@ -491,7 +797,7 @@ public final class ModSettingsActivity extends Activity {
         LinearLayout searchBox = new LinearLayout(this);
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         searchBox.setPadding(dp(12), 0, dp(12), 0);
-        searchBox.setBackground(rounded(palette.field, dp(14)));
+        searchBox.setBackground(rounded(palette.field, dp(12)));
         ImageView glass = new ImageView(this);
         glass.setImageDrawable(new Glyph(Glyph.Kind.SEARCH, palette.textSecondary, dp(18)));
         searchBox.addView(glass, new LinearLayout.LayoutParams(dp(18), dp(18)));
@@ -505,51 +811,78 @@ public final class ModSettingsActivity extends Activity {
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         search.setPadding(dp(8), 0, 0, 0);
-        searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(42), 1));
-        search.setOnFocusChangeListener((view, focused) -> searchBox.animate()
-                .scaleX(focused ? 1.015f : 1f).scaleY(focused ? 1.015f : 1f).setDuration(160).start());
-        LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(-1, dp(42));
-        boxParams.setMargins(dp(8), dp(12), dp(8), dp(12));
+        searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(46), 1));
+        LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(-1, dp(46));
+        boxParams.setMargins(dp(16), dp(10), dp(16), dp(12));
         parent.addView(searchBox, boxParams);
         return search;
     }
 
-    /** A group row: colored icon tile, title, how many of its switches are on. */
-    private TextView categoryRow(LinearLayout card, Category category) {
+    /**
+     * A group row: a thin grey icon, the name, and a row of dots, one per switch in the group,
+     * filled for those that are on. The region group shows the chosen country instead.
+     */
+    private Runnable categoryRow(LinearLayout card, Category category) {
         LinearLayout row = row(card);
         ImageView icon = new ImageView(this);
-        icon.setImageDrawable(new Glyph(category.icon, 0xFFFFFFFF, dp(20)));
-        icon.setScaleType(ImageView.ScaleType.CENTER);
-        icon.setBackground(rounded(category.color, dp(9)));
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(34), dp(34));
+        icon.setImageDrawable(new Glyph(category.icon, palette.textSecondary, dp(20)));
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(20), dp(20));
         iconParams.setMarginEnd(dp(14));
         row.addView(icon, iconParams);
-        LinearLayout texts = texts(row, I18n.get(category.title), categorySummary(category));
+        LinearLayout texts = texts(row, I18n.get(category.title), null);
+        texts.setContentDescription(I18n.get(category.title) + ". " + categorySummary(category));
+        TextView value = null;
+        Meter meter = null;
+        if (category == Category.REGION) {
+            // A small chip: round flag + country code, or "Off".
+            value = new TextView(this);
+            value.setTextSize(12.5f);
+            value.setBackground(rounded(palette.pressed, dp(8)));
+            value.setPadding(dp(8), dp(4), dp(9), dp(4));
+            value.setCompoundDrawablePadding(dp(6));
+            value.setGravity(Gravity.CENTER_VERTICAL);
+            value.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            row.addView(value);
+        } else {
+            meter = new Meter(this, palette.trackOn, palette.trackOff);
+            row.addView(meter);
+        }
         ImageView chevron = new ImageView(this);
-        chevron.setImageDrawable(new Glyph(Glyph.Kind.CHEVRON, palette.chevron, dp(20)));
-        LinearLayout.LayoutParams chevronParams = new LinearLayout.LayoutParams(dp(20), dp(20));
-        chevronParams.setMarginStart(dp(8));
+        chevron.setImageDrawable(new Glyph(Glyph.Kind.CHEVRON, palette.chevron, dp(18)));
+        LinearLayout.LayoutParams chevronParams = new LinearLayout.LayoutParams(dp(18), dp(18));
+        chevronParams.setMarginStart(dp(10));
         row.addView(chevron, chevronParams);
-        row.setOnTouchListener((view, event) -> {
-            switch (event.getActionMasked()) {
-                case android.view.MotionEvent.ACTION_DOWN:
-                    icon.animate().scaleX(0.86f).scaleY(0.86f).setDuration(110).setInterpolator(EASE).start();
-                    break;
-                case android.view.MotionEvent.ACTION_UP:
-                case android.view.MotionEvent.ACTION_CANCEL:
-                    icon.animate().scaleX(1f).scaleY(1f).setDuration(420)
-                            .setInterpolator(new android.view.animation.OvershootInterpolator(3f)).start();
-                    break;
-                default:
-                    break;
-            }
-            return false;
-        });
         row.setOnClickListener(view -> {
             hideKeyboard(view);
             push(categoryPage(category), true);
         });
-        return (TextView) texts.getChildAt(1);
+        TextView regionValue = value;
+        Meter dots = meter;
+        Runnable refresh = () -> {
+            texts.setContentDescription(I18n.get(category.title) + ". " + categorySummary(category));
+            if (regionValue != null) {
+                String code = Prefs.region();
+                String flag = RegionFlag.of(code);
+                boolean set = Regions.find(code) != null;
+                regionValue.setText(set ? code.toUpperCase(Locale.ROOT) : I18n.get(S.OFF));
+                regionValue.setTextColor(set ? palette.textPrimary : palette.textSecondary);
+                regionValue.setTypeface(set ? Fonts.semibold(this) : Fonts.regular(this));
+                regionValue.setLetterSpacing(set ? 0.04f : 0f);
+                regionValue.setCompoundDrawablesRelative(set && flag != null ? new FlagDot(flag, dp(14)) : null,
+                        null, null, null);
+            }
+            if (dots == null) return;
+            int total = 0;
+            int enabled = 0;
+            for (Setting setting : SETTINGS) {
+                if (setting.category != category) continue;
+                total++;
+                if (Prefs.on(setting.key)) enabled++;
+            }
+            dots.set(enabled, total);
+        };
+        refresh.run();
+        return refresh;
     }
 
     private String categorySummary(Category category) {
@@ -588,64 +921,77 @@ public final class ModSettingsActivity extends Activity {
 
     private View categoryPage(Category category) {
         Page page = new Page(I18n.get(category.title), true);
-        LinearLayout card = page.card();
-        View dim = null;
         if (category == Category.REGION) {
-            buildRegion(page, card);
-        } else {
-            for (Setting setting : SETTINGS) {
-                if (setting.category != category) continue;
-                toggle(card, setting.title, setting.description, setting.key);
-                // Burn-in protection: dimming is optional, shown right under its switch.
-                if (Prefs.BURN_IN.equals(setting.key)) dim = toggle(card, S.BURN_IN_DIM, S.BURN_IN_DIM_DESC, Prefs.BURN_IN_DIM);
-            }
+            buildRegion(page, page.card());
+            return page.root;
         }
-        if (category == Category.SOCIAL) {
+        // Each group gets its own heading and card; extra rows sit right under the switch they belong to.
+        List<Runnable> syncs = new ArrayList<>();
+        LinearLayout card = null;
+        S group = null;
+        for (Setting setting : SETTINGS) {
+            if (setting.category != category) continue;
+            if (card == null || setting.group != group) {
+                group = setting.group;
+                if (group != null) page.section(I18n.get(group));
+                card = page.card();
+            }
+            toggle(card, setting.title, setting.description, setting.key);
+            extras(card, setting.key, syncs);
+        }
+        if (category == Category.INTERFACE) opacityRow(page);
+        for (Runnable sync : syncs) sync.run();
+        if (!syncs.isEmpty()) page.root.setTag((Runnable) () -> { for (Runnable sync : syncs) sync.run(); });
+        return page.root;
+    }
+
+    /** Rows that refine a switch: shown under it, and only while it is on. */
+    private void extras(LinearLayout card, String key, List<Runnable> syncs) {
+        if (Prefs.BURN_IN.equals(key)) {
+            View dim = toggle(card, S.BURN_IN_DIM, S.BURN_IN_DIM_DESC, Prefs.BURN_IN_DIM);
+            subOption(dim);
+            syncs.add(() -> dim.setVisibility(Prefs.on(Prefs.BURN_IN) ? View.VISIBLE : View.GONE));
+            navigation(card, I18n.get(S.HIDE_PARTS), null, view -> push(hidePage(), true));
+        } else if (Prefs.ACCENT.equals(key)) {
+            TextView value = navigation(card, I18n.get(S.ACCENT_PICK), null, view -> push(colorPage(), true));
+            View row = (View) value.getParent();
+            syncs.add(() -> {
+                value.setCompoundDrawablesRelative(swatch((int) Prefs.number(Prefs.ACCENT_COLOR), dp(22)), null, null, null);
+                row.setVisibility(Prefs.on(Prefs.ACCENT) ? View.VISIBLE : View.GONE);
+            });
+        } else if (Prefs.AMOLED.equals(key)) {
+            TextView value = navigation(card, I18n.get(S.FONT), fontLabel(), view -> openSheet(fontSheet()));
+            syncs.add(() -> value.setText(fontLabel()));
+        } else if (Prefs.REMEMBER_SPEED.equals(key)) {
+            TextView value = navigation(card, I18n.get(S.SPEEDS), speedsLabel(), view -> push(speedsPage(), true));
+            syncs.add(() -> value.setText(speedsLabel()));
+        } else if (Prefs.AUTO_TRANSLATE.equals(key)) {
             TextView value = navigation(card, I18n.get(S.TRANSLATE_EXCLUDE), Prefs.text(Prefs.TRANSLATE_EXCLUDE),
                     view -> push(excludePage(), true));
             View row = (View) value.getParent();
-            Runnable sync = () -> {
+            syncs.add(() -> {
                 value.setText(Prefs.text(Prefs.TRANSLATE_EXCLUDE));
                 row.setVisibility(Prefs.on(Prefs.AUTO_TRANSLATE) ? View.VISIBLE : View.GONE);
-            };
-            sync.run();
-            page.root.setTag(sync);
-        }
-        if (category == Category.STREAKS) {
+            });
+        } else if (Prefs.CUSTOM_FILTER.equals(key)) {
+            View setup = (View) navigation(card, I18n.get(S.FILTER_SETUP), null, view -> push(filterPage(), true)).getParent();
+            syncs.add(() -> setup.setVisibility(Prefs.on(Prefs.CUSTOM_FILTER) ? View.VISIBLE : View.GONE));
+        } else if (Prefs.OLD_VIDEOS.equals(key)) {
+            TextView value = navigation(card, I18n.get(S.OLD_AGE), ageLabel(Prefs.oldVideoDays()),
+                    view -> push(agePage(), true));
+            View row = (View) value.getParent();
+            syncs.add(() -> {
+                value.setText(ageLabel(Prefs.oldVideoDays()));
+                row.setVisibility(Prefs.on(Prefs.OLD_VIDEOS) ? View.VISIBLE : View.GONE);
+            });
+        } else if (Prefs.AUTO_STREAK.equals(key)) {
             TextView value = navigation(card, I18n.get(S.STREAK_SEND), stickerLabel(), view -> push(stickerPage(), true));
             View row = (View) value.getParent();
-            Runnable sync = () -> {
+            syncs.add(() -> {
                 value.setText(stickerLabel());
                 row.setVisibility(Prefs.on(Prefs.AUTO_STREAK) ? View.VISIBLE : View.GONE);
-            };
-            sync.run();
-            page.root.setTag(sync);
+            });
         }
-        if (category == Category.INTERFACE) {
-            navigation(card, I18n.get(S.HIDE_PARTS), null, view -> push(hidePage(), true));
-            opacityRow(page);
-            TextView value = navigation(card, I18n.get(S.ACCENT_PICK), null, view -> push(colorPage(), true));
-            View row = (View) value.getParent();
-            View dimRow = dim;
-            Runnable sync = () -> {
-                value.setCompoundDrawablesRelative(swatch((int) Prefs.number(Prefs.ACCENT_COLOR), dp(22)), null, null, null);
-                row.setVisibility(Prefs.on(Prefs.ACCENT) ? View.VISIBLE : View.GONE);
-                if (dimRow != null) dimRow.setVisibility(Prefs.on(Prefs.BURN_IN) ? View.VISIBLE : View.GONE);
-            };
-            sync.run();
-            page.root.setTag(sync);
-        }
-        if (category == Category.PLAYBACK) {
-            TextView value = navigation(card, I18n.get(S.SPEEDS), speedsLabel(), view -> push(speedsPage(), true));
-            page.root.setTag((Runnable) () -> value.setText(speedsLabel()));
-        }
-        if (category == Category.FEED) {
-            View setup = (View) navigation(card, I18n.get(S.FILTER_SETUP), null, view -> push(filterPage(), true)).getParent();
-            Runnable sync = () -> setup.setVisibility(Prefs.on(Prefs.CUSTOM_FILTER) ? View.VISIBLE : View.GONE);
-            sync.run();
-            page.root.setTag(sync);
-        }
-        return page.root;
     }
 
     /** A slider for the opacity of buttons and captions over videos. */
@@ -684,9 +1030,6 @@ public final class ModSettingsActivity extends Activity {
         page.footer(I18n.get(S.OVERLAY_OPACITY_DESC));
     }
 
-    private static final int[] ACCENTS = {
-            0x25F4EE, 0x1FA2FF, 0x8B5CF6, 0xFF4FA3, 0xFF8A00, 0x22C55E, 0xFACC15, 0x14B8A6};
-
     private GradientDrawable swatch(int rgb, int size) {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
@@ -697,40 +1040,35 @@ public final class ModSettingsActivity extends Activity {
         return circle;
     }
 
-    /** Ready colors to tap, plus any hex value. */
+    /** A switch drawn in the given accent, to preview it before leaving the picker. */
+    private Toggle sampleToggle(int rgb) {
+        Palette sample = Palette.settings(palette.dark, palette.dark && Prefs.on(Prefs.AMOLED), 0xFF000000 | rgb);
+        Toggle toggle = new Toggle(this, sample);
+        toggle.setChecked(true, false);
+        toggle.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        return toggle;
+    }
+
+    /** A saturation/brightness square, a hue strip and a hex field; every change is saved at once. */
     private View colorPage() {
         Page page = new Page(I18n.get(S.ACCENT_PICK), true);
-        LinearLayout card = page.card();
         int current = (int) Prefs.number(Prefs.ACCENT_COLOR) & 0xFFFFFF;
-        LinearLayout grid = new LinearLayout(this);
-        grid.setOrientation(LinearLayout.VERTICAL);
-        grid.setPadding(dp(12), dp(16), dp(12), dp(16));
-        card.addView(grid, new LinearLayout.LayoutParams(-1, -2));
-        LinearLayout line = null;
-        for (int index = 0; index < ACCENTS.length; index++) {
-            if (index % 4 == 0) {
-                line = new LinearLayout(this);
-                line.setGravity(Gravity.CENTER);
-                grid.addView(line, new LinearLayout.LayoutParams(-1, dp(64)));
-            }
-            int rgb = ACCENTS[index];
-            FrameLayout cell = new FrameLayout(this);
-            ImageView dot = new ImageView(this);
-            dot.setImageDrawable(swatch(rgb, dp(44)));
-            cell.addView(dot, new FrameLayout.LayoutParams(dp(44), dp(44), Gravity.CENTER));
-            if (rgb == current) {
-                ImageView check = new ImageView(this);
-                check.setImageDrawable(new Glyph(Glyph.Kind.CHECK, 0xFFFFFFFF, dp(22)));
-                cell.addView(check, new FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER));
-            }
-            cell.setOnClickListener(view -> {
-                view.animate().scaleX(0.85f).scaleY(0.85f).setDuration(90).withEndAction(() -> {
-                    Prefs.setNumber(Prefs.ACCENT_COLOR, rgb);
-                    pop();
-                }).start();
-            });
-            line.addView(cell, new LinearLayout.LayoutParams(0, dp(56), 1));
-        }
+
+        LinearLayout sampleCard = page.card();
+        LinearLayout sampleRow = row(sampleCard);
+        sampleRow.setBackground(null);
+        texts(sampleRow, I18n.get(S.ACCENT_SAMPLE), null);
+        FrameLayout sampleSlot = new FrameLayout(this);
+        sampleRow.addView(sampleSlot, new LinearLayout.LayoutParams(-2, -2));
+        sampleSlot.addView(sampleToggle(current));
+
+        page.content.addView(new View(this), new LinearLayout.LayoutParams(-1, dp(12)));
+        LinearLayout panelCard = page.card();
+        ColorPanel panel = new ColorPanel(this);
+        panel.setColor(current);
+        LinearLayout.LayoutParams panelParams = new LinearLayout.LayoutParams(-1, -2);
+        panelParams.setMargins(dp(8), dp(10), dp(8), dp(4));
+        panelCard.addView(panel, panelParams);
 
         page.section(I18n.get(S.ACCENT_HEX));
         LinearLayout hexCard = page.card();
@@ -753,24 +1091,262 @@ public final class ModSettingsActivity extends Activity {
         hex.setFilters(new InputFilter[]{new InputFilter.LengthFilter(7)});
         hex.setImeOptions(EditorInfo.IME_ACTION_DONE);
         row.addView(hex, new LinearLayout.LayoutParams(0, -2, 1));
+        boolean[] typing = {false};
+        java.util.function.IntConsumer show = rgb -> {
+            preview.setImageDrawable(swatch(rgb, dp(26)));
+            sampleSlot.removeAllViews();
+            sampleSlot.addView(sampleToggle(rgb));
+        };
+        panel.setListener((rgb, done) -> {
+            show.accept(rgb);
+            typing[0] = true;
+            hex.setText(String.format(Locale.ROOT, "#%06X", rgb));
+            typing[0] = false;
+            if (done) {
+                Prefs.setNumber(Prefs.ACCENT_COLOR, rgb);
+                panel.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            }
+        });
         hex.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
             @Override public void afterTextChanged(Editable s) {
+                if (typing[0]) return;
                 Integer rgb = parseHex(s.toString());
-                if (rgb != null) preview.setImageDrawable(swatch(rgb, dp(26)));
+                if (rgb == null) return;
+                show.accept(rgb);
+                panel.setColor(rgb);
             }
         });
         hex.setOnEditorActionListener((view, action, event) -> {
             Integer rgb = parseHex(hex.getText().toString());
             if (rgb != null) {
                 Prefs.setNumber(Prefs.ACCENT_COLOR, rgb);
+                hideKeyboard(view);
                 pop();
             }
             return true;
         });
         page.footer(I18n.get(S.ACCENT_FOOTER));
         return page.root;
+    }
+
+    // ---- font ------------------------------------------------------------------------------
+
+    private String fontLabel() {
+        if (!Prefs.on(Prefs.FONT)) return I18n.get(S.FONT_TIKTOK);
+        if (!FontSwap.SOURCE_FILE.equals(Prefs.text(Prefs.FONT_SOURCE))) return I18n.get(S.FONT_SYSTEM);
+        String name = Prefs.text(Prefs.FONT_FILE);
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) : name;
+    }
+
+    /** The face a choice will look like: TikTok's (this screen's own font), the system's, or the imported file. */
+    private Typeface fontPreview(int choice) {
+        if (choice == 1) return Typeface.create("sans-serif", Typeface.NORMAL);
+        if (choice == 2) {
+            java.io.File file = FontSwap.file(this);
+            if (file.isFile()) {
+                try {
+                    return Typeface.createFromFile(file);
+                } catch (RuntimeException broken) {
+                    return Fonts.regular(this);
+                }
+            }
+        }
+        return Fonts.regular(this);
+    }
+
+    /** 0 TikTok, 1 system, 2 file. */
+    private static int fontChoice() {
+        if (!Prefs.on(Prefs.FONT)) return 0;
+        return FontSwap.SOURCE_FILE.equals(Prefs.text(Prefs.FONT_SOURCE)) ? 2 : 1;
+    }
+
+    /** A sample line in the chosen font, then the three sources as a single-choice list. */
+    private View fontSheet() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        TextView sample = new TextView(this);
+        sample.setText(I18n.get(S.FONT_SAMPLE));
+        sample.setTextColor(palette.textPrimary);
+        sample.setTextSize(22);
+        sample.setPadding(dp(18), dp(6), dp(18), dp(14));
+        content.addView(sample);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        content.addView(list);
+        boolean hasFile = FontSwap.file(this).isFile() && !Prefs.text(Prefs.FONT_FILE).isEmpty();
+        S[] titles = {S.FONT_TIKTOK, S.FONT_SYSTEM, S.FONT_FROM_FILE};
+        List<ImageView> marks = new ArrayList<>();
+        Runnable[] render = new Runnable[1];
+        render[0] = () -> {
+            int chosen = fontChoice();
+            sample.setTypeface(fontPreview(chosen));
+            for (int index = 0; index < marks.size(); index++) {
+                marks.get(index).setImageDrawable(radio(index == chosen));
+            }
+        };
+        for (int index = 0; index < titles.length; index++) {
+            int choice = index;
+            LinearLayout row = row(list);
+            String detail = null;
+            if (choice == 2) {
+                detail = hasFile ? Prefs.text(Prefs.FONT_FILE) + " · " + I18n.get(S.FONT_CHANGE) : I18n.get(S.FONT_PICK);
+            }
+            LinearLayout texts = texts(row, I18n.get(titles[index]), detail);
+            ImageView mark = new ImageView(this);
+            row.addView(mark, new LinearLayout.LayoutParams(dp(22), dp(22)));
+            marks.add(mark);
+            if (choice == 2) {
+                // The note under "From a file" picks a new file; the row itself selects the saved one.
+                View note = texts.getChildCount() > 1 ? texts.getChildAt(texts.getChildCount() - 1) : null;
+                if (note != null) note.setOnClickListener(view -> pickFont());
+            }
+            row.setOnClickListener(view -> {
+                row.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                if (choice == 2 && !(FontSwap.file(this).isFile() && !Prefs.text(Prefs.FONT_FILE).isEmpty())) {
+                    pickFont();
+                    return;
+                }
+                Prefs.set(Prefs.FONT, choice != 0);
+                if (choice != 0) Prefs.setText(Prefs.FONT_SOURCE, choice == 2 ? FontSwap.SOURCE_FILE : FontSwap.SOURCE_SYSTEM);
+                render[0].run();
+            });
+        }
+        render[0].run();
+        fontChanged = () -> {
+            if (sheet == null) return;
+            openSheet(fontSheet());
+        };
+        return content;
+    }
+
+    private GradientDrawable radio(boolean on) {
+        GradientDrawable circle = new GradientDrawable();
+        circle.setShape(GradientDrawable.OVAL);
+        circle.setSize(dp(22), dp(22));
+        if (on) {
+            circle.setColor(palette.background);
+            circle.setStroke(dp(6.5f), palette.trackOn);
+        } else {
+            circle.setColor(0);
+            circle.setStroke(dp(2), palette.textTertiary);
+        }
+        return circle;
+    }
+
+    private void pickFont() {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+        pick.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"font/ttf", "font/otf", "font/sfnt", "font/collection",
+                "application/x-font-ttf", "application/x-font-otf", "application/font-sfnt", "application/octet-stream"});
+        try {
+            startActivityForResult(pick, PICK_FONT);
+        } catch (RuntimeException unavailable) {
+            android.widget.Toast.makeText(this, I18n.get(S.FONT_FAILED), android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request != PICK_FONT || result != RESULT_OK || data == null || data.getData() == null) return;
+        Uri uri = data.getData();
+        String name = displayName(uri);
+        new Thread(() -> {
+            String error = FontSwap.importFont(this, uri);
+            runOnUiThread(() -> {
+                if (error != null) {
+                    android.widget.Toast.makeText(this, I18n.get(S.FONT_FAILED), android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Prefs.setText(Prefs.FONT_FILE, name);
+                Prefs.setText(Prefs.FONT_SOURCE, FontSwap.SOURCE_FILE);
+                Prefs.set(Prefs.FONT, true);
+                if (fontChanged != null) fontChanged.run();
+            });
+        }, "tpx-font-import").start();
+    }
+
+    private String displayName(Uri uri) {
+        try (android.database.Cursor cursor = getContentResolver().query(uri,
+                new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getString(0);
+        } catch (RuntimeException ignored) { }
+        String last = uri.getLastPathSegment();
+        return last == null ? "font" : last.substring(last.lastIndexOf('/') + 1);
+    }
+
+    // ---- bottom sheet ----------------------------------------------------------------------
+
+    /** A panel that slides up over a dim layer; tapping the dim or Back closes it. */
+    private void openSheet(View content) {
+        boolean replacing = sheet != null;
+        if (replacing) {
+            root.removeView(sheet);
+            sheet = null;
+        }
+        FrameLayout layer = new FrameLayout(this);
+        View dim = new View(this);
+        dim.setBackgroundColor(0x99000000);
+        layer.addView(dim, new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(palette.card);
+        float radius = dp(24);
+        shape.setCornerRadii(new float[]{radius, radius, radius, radius, 0, 0, 0, 0});
+        panel.setBackground(shape);
+        panel.setClickable(true);
+        panel.setPadding(0, dp(10), 0, dp(12) + bottomInset);
+        View grab = new View(this);
+        grab.setBackground(rounded(palette.textTertiary, dp(2)));
+        grab.setAlpha(0.6f);
+        LinearLayout.LayoutParams grabParams = new LinearLayout.LayoutParams(dp(36), dp(4));
+        grabParams.gravity = Gravity.CENTER_HORIZONTAL;
+        grabParams.bottomMargin = dp(10);
+        panel.addView(grab, grabParams);
+        panel.addView(content);
+        layer.addView(panel, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        dim.setOnClickListener(view -> closeSheet());
+        root.addView(layer, new FrameLayout.LayoutParams(-1, -1));
+        sheet = layer;
+        if (!replacing && motion()) {
+            dim.setAlpha(0f);
+            dim.animate().alpha(1f).setDuration(220).setInterpolator(EASE).start();
+            panel.setVisibility(View.INVISIBLE);
+            panel.post(() -> {
+                panel.setTranslationY(panel.getHeight());
+                panel.setVisibility(View.VISIBLE);
+                panel.animate().translationY(0).setDuration(280).setInterpolator(OPEN).start();
+            });
+        }
+        if (Build.VERSION.SDK_INT >= 33 && sheetBack == null) {
+            android.window.OnBackInvokedCallback callback = this::closeSheet;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback);
+            sheetBack = callback;
+        }
+    }
+
+    private void closeSheet() {
+        FrameLayout layer = sheet;
+        if (layer == null) return;
+        sheet = null;
+        fontChanged = null;
+        if (Build.VERSION.SDK_INT >= 33 && sheetBack != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback((android.window.OnBackInvokedCallback) sheetBack);
+            sheetBack = null;
+        }
+        View dim = layer.getChildAt(0);
+        View panel = layer.getChildAt(1);
+        if (!motion()) {
+            root.removeView(layer);
+            return;
+        }
+        dim.animate().alpha(0f).setDuration(180).setInterpolator(EASE).start();
+        panel.animate().translationY(panel.getHeight()).setDuration(200).setInterpolator(EASE)
+                .withEndAction(() -> root.removeView(layer)).start();
     }
 
     private static Integer parseHex(String value) {
@@ -1093,29 +1669,33 @@ public final class ModSettingsActivity extends Activity {
         View languageRow = toggle(card, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE);
         languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
         page.footer(I18n.get(S.REGION_DESC));
-        page.content.addView(new View(this), new LinearLayout.LayoutParams(-1, dp(16)));
-        LinearLayout fresh = page.card();
-        toggle(fresh, S.OLD_VIDEOS, S.OLD_VIDEOS_DESC, Prefs.OLD_VIDEOS);
-        TextView ageValue = navigation(fresh, I18n.get(S.OLD_AGE), ageLabel(Prefs.oldVideoDays()),
-                view -> push(agePage(), true));
-        View ageRow = (View) ageValue.getParent();
-        ageRow.setVisibility(Prefs.on(Prefs.OLD_VIDEOS) ? View.VISIBLE : View.GONE);
-        page.root.setTag((Runnable) () -> {
+        regionValue.setCompoundDrawablePadding(dp(8));
+        Runnable sync = () -> {
             regionValue.setText(regionLabel());
+            String flag = RegionFlag.of(Prefs.region());
+            regionValue.setCompoundDrawablesRelative(flag == null ? null : new FlagDot(flag, dp(18)), null, null, null);
             languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
-            ageValue.setText(ageLabel(Prefs.oldVideoDays()));
-            ageRow.setVisibility(Prefs.on(Prefs.OLD_VIDEOS) ? View.VISIBLE : View.GONE);
-        });
+        };
+        sync.run();
+        page.root.setTag(sync);
     }
 
+    /**
+     * A group of rows: one quiet card with hairlines between its rows, so a switch always sits
+     * inside a shape rather than floating on the page.
+     */
     private LinearLayout card(LinearLayout parent) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(0, dp(4), 0, dp(4));
         card.setBackground(rounded(palette.card, dp(16)));
         card.setClipToOutline(true);
+        GradientDrawable line = new GradientDrawable();
+        line.setColor(palette.hairline);
+        line.setSize(0, Math.max(1, dp(0.5f)));
+        card.setDividerDrawable(new android.graphics.drawable.InsetDrawable(line, dp(18), 0, 0, 0));
+        card.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.setMargins(dp(8), 0, dp(8), 0);
+        params.setMargins(dp(16), 0, dp(16), 0);
         parent.addView(card, params);
         return card;
     }
@@ -1148,11 +1728,16 @@ public final class ModSettingsActivity extends Activity {
         List<View> rows = new ArrayList<>();
         List<String> names = new ArrayList<>();
         String selected = Prefs.region();
-        rows.add(choice(list, I18n.get(S.REGION_OFF), selected.isEmpty(), () -> Prefs.setRegion("")));
+        View off = choice(list, I18n.get(S.REGION_OFF), selected.isEmpty(), () -> Prefs.setRegion(""));
+        leadingIcon(off, new Glyph(Glyph.Kind.GLOBE, palette.textSecondary, dp(22)));
+        rows.add(off);
         names.add("");
         for (Regions.Region region : Regions.sorted(locale)) {
             String name = region.name(locale);
-            rows.add(choice(list, name, region.iso.equals(selected), () -> Prefs.setRegion(region.iso)));
+            View row = choice(list, name, region.iso.equals(selected), () -> Prefs.setRegion(region.iso));
+            String flag = RegionFlag.of(region.iso);
+            if (flag != null) leadingIcon(row, new FlagDot(flag, dp(22)));
+            rows.add(row);
             names.add(name.toLowerCase(locale) + " " + region.iso + " " + region.name(Locale.ENGLISH).toLowerCase(Locale.ROOT));
         }
         search.addTextChangedListener(new TextWatcher() {
@@ -1237,6 +1822,8 @@ public final class ModSettingsActivity extends Activity {
     private View toggle(LinearLayout card, S title, S description, String key) {
         LinearLayout row = row(card);
         LinearLayout texts = texts(row, I18n.get(title), description == null ? null : I18n.get(description));
+        if (java.util.Arrays.asList(BETA_KEYS).contains(key)) chip(texts, "Beta", false);
+        if (java.util.Arrays.asList(Prefs.RESTART_KEYS).contains(key)) chip(texts, "↻", true);
         Toggle toggle = new Toggle(this, palette);
         toggle.setChecked(Prefs.on(key), false);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
@@ -1244,9 +1831,31 @@ public final class ModSettingsActivity extends Activity {
         row.addView(toggle, params);
         row.setContentDescription(texts.getContentDescription());
         texts.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        // The switch reacts the moment the finger lands, not when it lifts.
+        row.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    toggle.press(true);
+                    break;
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    toggle.press(false);
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        });
         row.setOnClickListener(view -> {
             boolean value = !toggle.checked();
             toggle.setChecked(value, true);
+            // The tick lands on the same frame the thumb starts to move.
+            if (Build.VERSION.SDK_INT >= 34) {
+                row.performHapticFeedback(value ? android.view.HapticFeedbackConstants.TOGGLE_ON
+                        : android.view.HapticFeedbackConstants.TOGGLE_OFF);
+            } else {
+                row.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            }
             Prefs.set(key, value);
             row.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_VIEW_CLICKED);
         });
@@ -1290,6 +1899,15 @@ public final class ModSettingsActivity extends Activity {
         return end;
     }
 
+    /** A 22dp icon before a row's text, such as a country's round flag. */
+    private void leadingIcon(View row, android.graphics.drawable.Drawable icon) {
+        ImageView view = new ImageView(this);
+        view.setImageDrawable(icon);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(22), dp(22));
+        params.setMarginEnd(dp(14));
+        ((LinearLayout) row).addView(view, 0, params);
+    }
+
     private View choice(LinearLayout card, String title, boolean selected, Runnable select) {
         LinearLayout row = row(card);
         row.setMinimumHeight(dp(52));
@@ -1311,11 +1929,10 @@ public final class ModSettingsActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setMinimumHeight(dp(56));
-        row.setPadding(dp(16), dp(12), dp(16), dp(12));
-        // Icons that pulse or spring past their size (the status dot, a pressed group icon) may
-        // draw over the padding instead of being cut at the content edge.
+        row.setMinimumHeight(dp(54));
+        row.setPadding(dp(18), dp(11), dp(16), dp(11));
         row.setClipToPadding(false);
+        // The card clips the press wash to its rounded corners.
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(palette.pressed), null,
                 new ColorDrawable(0xFFFFFFFF)));
         row.setClickable(true);
@@ -1324,20 +1941,65 @@ public final class ModSettingsActivity extends Activity {
         return row;
     }
 
+    /** An option of the row above it: indented under its parent's title, nothing more. */
+    private void subOption(View row) {
+        row.setPaddingRelative(dp(34), row.getPaddingTop(), row.getPaddingEnd(), row.getPaddingBottom());
+    }
+
+    /** Settings still being tested on real accounts; they carry a "Beta" mark. */
+    private static final String[] BETA_KEYS = {Prefs.NO_LOGIN_WALL, Prefs.BLOCK_LOCATION, Prefs.HIDE_VPN, Prefs.SPOOF_ANDROID_ID,
+            Prefs.UNMUTE, Prefs.SELF_REPOST};
+
+    /**
+     * A small mark after a row's title: an outlined "Beta" for settings under test, a plain
+     * restart glyph for those that apply after TikTok restarts. Both stay in the text colors.
+     */
+    private void chip(LinearLayout texts, String label, boolean warm) {
+        View first = texts.getChildAt(0);
+        LinearLayout line;
+        if (first instanceof LinearLayout) {
+            line = (LinearLayout) first;
+        } else {
+            texts.removeView(first);
+            line = new LinearLayout(this);
+            line.setGravity(Gravity.CENTER_VERTICAL);
+            // Wrap-content line with a weighted title: the chip sits right after a short title,
+            // and a long title gives up width (and wraps) instead of pushing the chip out.
+            line.addView(first, new LinearLayout.LayoutParams(-2, -2, 1));
+            texts.addView(line, 0, new LinearLayout.LayoutParams(-2, -2));
+        }
+        TextView chip = new TextView(this);
+        chip.setText(label);
+        chip.setTextSize(warm ? 13 : 10.5f);
+        chip.setTypeface(Fonts.regular(this));
+        chip.setTextColor(warm ? palette.textTertiary : palette.textSecondary);
+        if (!warm) {
+            GradientDrawable outline = rounded(0, dp(9));
+            outline.setStroke(Math.max(1, dp(0.75f)), palette.textTertiary);
+            chip.setBackground(outline);
+            chip.setPadding(dp(6), 0, dp(6), dp(1));
+        }
+        chip.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+        params.setMarginStart(dp(8));
+        line.addView(chip, params);
+    }
+
     private LinearLayout texts(LinearLayout row, String title, String description) {
         LinearLayout texts = new LinearLayout(this);
         texts.setOrientation(LinearLayout.VERTICAL);
         TextView titleView = new TextView(this);
         titleView.setText(title);
         titleView.setTextColor(palette.textPrimary);
-        titleView.setTextSize(17);
+        titleView.setTextSize(16);
         titleView.setTypeface(Fonts.semibold(this));
         texts.addView(titleView);
         if (description != null) {
             TextView descriptionView = new TextView(this);
             descriptionView.setText(description);
             descriptionView.setTextColor(palette.textSecondary);
-            descriptionView.setTextSize(14);
+            descriptionView.setTextSize(13.5f);
+            descriptionView.setLineSpacing(0, 1.08f);
             descriptionView.setTypeface(Fonts.regular(this));
             descriptionView.setPadding(0, dp(2), 0, 0);
             texts.addView(descriptionView);
@@ -1354,25 +2016,25 @@ public final class ModSettingsActivity extends Activity {
         bar.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout inner = new LinearLayout(this);
         inner.setGravity(Gravity.CENTER_VERTICAL);
-        inner.setPadding(dp(16), dp(10), dp(10), dp(10));
-        inner.setBackground(rounded(palette.dark ? 0xFF2B2B2B : 0xFF161823, dp(12)));
-        inner.setElevation(dp(6));
+        inner.setPadding(dp(16), dp(8), dp(8), dp(8));
+        // Inverted: the one solid shape on a page of plain text, so it is seen without a color.
+        inner.setBackground(rounded(palette.textPrimary, dp(12)));
         TextView hint = new TextView(this);
         hint.setText(I18n.get(S.RESTART_HINT));
-        hint.setTextColor(0xFFFFFFFF);
-        hint.setTextSize(14);
+        hint.setTextColor(blend(palette.background, palette.textPrimary, 0.35f));
+        hint.setTextSize(13.5f);
         hint.setTypeface(Fonts.regular(this));
         inner.addView(hint, new LinearLayout.LayoutParams(0, -2, 1));
         TextView button = new TextView(this);
         button.setText(I18n.get(S.RESTART));
-        button.setTextColor(0xFFFFFFFF);
+        button.setTextColor(palette.background);
         button.setTextSize(15);
         button.setTypeface(Fonts.semibold(this));
         button.setGravity(Gravity.CENTER);
-        button.setPadding(dp(16), 0, dp(16), 0);
+        button.setPadding(dp(14), 0, dp(14), 0);
         button.setMinHeight(dp(40));
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33FFFFFF),
-                rounded(palette.accent, dp(6)), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(palette.dark ? 0x22000000 : 0x33FFFFFF), null,
+                rounded(0xFFFFFFFF, dp(10))));
         button.setOnClickListener(view -> AppRestart.restart(this));
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(-2, dp(40));
         buttonParams.setMarginStart(dp(12));
@@ -1393,16 +2055,26 @@ public final class ModSettingsActivity extends Activity {
 
     private void updateRestartBar(boolean animate) {
         boolean show = Prefs.restartPending();
-        if (show == (restartBar.getVisibility() == View.VISIBLE)) return;
+        boolean shown = restartBar.getVisibility() == View.VISIBLE && restartBar.getAlpha() > 0f;
+        if (show == shown) return;
         if (!show) {
-            restartBar.setVisibility(View.GONE);
+            // Leaves the way it came, faster than it arrived.
+            if (animate && motion()) {
+                restartBar.animate().alpha(0f).translationY(dp(12)).setDuration(150).setInterpolator(PRESS)
+                        .withEndAction(() -> restartBar.setVisibility(View.GONE)).start();
+            } else {
+                restartBar.setVisibility(View.GONE);
+            }
             return;
         }
+        restartBar.animate().cancel();
         restartBar.setVisibility(View.VISIBLE);
-        if (animate) {
+        restartBar.setAlpha(1f);
+        restartBar.setTranslationY(0);
+        if (animate && motion()) {
             restartBar.setAlpha(0f);
-            restartBar.setTranslationY(dp(24));
-            restartBar.animate().alpha(1f).translationY(0).setDuration(220).start();
+            restartBar.setTranslationY(dp(12));
+            restartBar.animate().alpha(1f).translationY(0).setDuration(220).setInterpolator(EASE).start();
         }
     }
 
@@ -1441,7 +2113,11 @@ public final class ModSettingsActivity extends Activity {
             scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
             this.root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
 
-            toolbar.setBackgroundColor(palette.background);
+            // Clear while the page is at its top, so the hero glow runs under the status bar;
+            // it fills in as content scrolls beneath it, instead of a hard divider line.
+            ColorDrawable toolbarFill = new ColorDrawable(palette.background);
+            toolbarFill.setAlpha(0);
+            toolbar.setBackground(toolbarFill);
             ImageView back = new ImageView(ModSettingsActivity.this);
             back.setImageDrawable(new Glyph(Glyph.Kind.BACK, palette.textPrimary, dp(24)));
             back.setScaleType(ImageView.ScaleType.CENTER);
@@ -1469,19 +2145,23 @@ public final class ModSettingsActivity extends Activity {
             toolbar.addView(small, smallParams);
             this.root.addView(toolbar, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
 
-            TextView large = null;
+            View large = null;
             if (root) {
-                large = new TextView(ModSettingsActivity.this);
-                large.setText(title);
-                large.setTextColor(palette.textPrimary);
-                large.setTextSize(32);
-                large.setTypeface(Fonts.bold(ModSettingsActivity.this));
-                large.setPadding(dp(32), dp(8), dp(32), dp(12));
-                content.addView(large);
+                TextView heading = new TextView(ModSettingsActivity.this);
+                heading.setText(title);
+                heading.setTextColor(palette.textPrimary);
+                heading.setTextSize(32);
+                // Large type reads looser than it is; a slightly negative tracking tightens it.
+                heading.setLetterSpacing(-0.025f);
+                heading.setTypeface(Fonts.bold(ModSettingsActivity.this));
+                heading.setPadding(dp(24), dp(8), dp(24), dp(14));
+                content.addView(heading);
+                large = heading;
                 small.setAlpha(0f);
             }
-            TextView largeTitle = large;
+            View largeTitle = large;
             scroll.setOnScrollChangeListener((view, x, y, oldX, oldY) -> {
+                toolbarFill.setAlpha(Math.round(255 * clamp(y / (float) dp(20))));
                 if (largeTitle == null) return;
                 float fade = Math.max(0f, Math.min(1f, (y - largeTitle.getHeight() * 0.5f) / (largeTitle.getHeight() * 0.4f)));
                 small.setAlpha(fade);
@@ -1498,10 +2178,10 @@ public final class ModSettingsActivity extends Activity {
         void section(String title) {
             TextView header = new TextView(ModSettingsActivity.this);
             header.setText(title);
-            header.setTextColor(palette.textSecondary);
-            header.setTextSize(15);
-            header.setTypeface(Fonts.semibold(ModSettingsActivity.this));
-            header.setPadding(dp(32), dp(20), dp(32), dp(10));
+            header.setTextColor(palette.textTertiary);
+            header.setTextSize(12.5f);
+            header.setTypeface(Fonts.regular(ModSettingsActivity.this));
+            header.setPadding(dp(34), dp(24), dp(34), dp(8));
             if (Build.VERSION.SDK_INT >= 28) header.setAccessibilityHeading(true);
             content.addView(header);
         }

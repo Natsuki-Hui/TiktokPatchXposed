@@ -30,6 +30,11 @@ final class AutoStreakManager {
     private static volatile StreakSender sender;
     private static volatile long lastCheckElapsed;
     private static volatile int startupRetries;
+    /** When TikTok last came to the foreground; messages from other phones arrive after that. */
+    private static volatile long foregroundSince;
+    private static volatile int syncWaits;
+    private static volatile StreakSentCheck sentCheck;
+    private static volatile boolean sentCheckFailed;
     private static boolean lastEnabled;
 
     private AutoStreakManager() { }
@@ -38,6 +43,7 @@ final class AutoStreakManager {
         context = app;
         loader = classLoader;
         StreakApi.capture(classLoader);
+        StreakSentCheck.capture(classLoader);
         lastEnabled = enabled();
         Prefs.listen(() -> MAIN.post(AutoStreakManager::onSettingsChanged));
         app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
@@ -72,6 +78,8 @@ final class AutoStreakManager {
     private static void onForeground() {
         foreground = true;
         startupRetries = 0;
+        syncWaits = 0;
+        foregroundSince = SystemClock.elapsedRealtime();
         if (enabled()) {
             long remaining = MIN_CHECK_INTERVAL_MS - (SystemClock.elapsedRealtime() - lastCheckElapsed);
             schedule(Math.max(openDelay(), remaining));
@@ -113,6 +121,12 @@ final class AutoStreakManager {
                 List<?> items = api.items();
                 if (account == null || items == null) {
                     if (startupRetries++ < 2) schedule(60_000L);
+                    return;
+                }
+                // Until TikTok has pulled new messages, a flame sent from another phone is not known here.
+                if (!StreakSentCheck.pulledSince(foregroundSince)) {
+                    if (syncWaits++ < 6) schedule(20_000L);
+                    else RuntimeLog.log("streak check: messages not synced, nothing sent");
                     return;
                 }
                 lastCheckElapsed = SystemClock.elapsedRealtime();
@@ -157,7 +171,13 @@ final class AutoStreakManager {
                 continue;
             }
             StreakApi.Candidate selected = current;
-            String day = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
+            // Already sent today, by hand or from another phone with the same account: the friend's turn.
+            if (sentSince(account, selected) == StreakSentCheck.Answer.SENT) {
+                RuntimeLog.log("streak window " + selected.window() + ": already sent today");
+                skipped++;
+                continue;
+            }
+            String day =new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new java.util.Date());
             String result = sender.send(account, selected, day, () -> {
                 if (!enabled() || !foreground || !selected.atRisk(System.currentTimeMillis())) return false;
                 try {
@@ -182,6 +202,20 @@ final class AutoStreakManager {
                 + " eligible=" + candidates.size() + " confirmed=" + confirmed + " unresolved=" + unresolved
                 + " skipped=" + skipped + (next == Long.MAX_VALUE ? "" : " nextRiskIn=" + (next - now) / 60_000L + "m"));
         if (next != Long.MAX_VALUE) schedule(Math.max(MIN_CHECK_INTERVAL_MS, next - now + between(60_000L, 600_000L)));
+    }
+
+    /** UNKNOWN when TikTok's history cannot be read; the flame then goes as before. */
+    private static StreakSentCheck.Answer sentSince(String account, StreakApi.Candidate candidate) {
+        if (sentCheck == null && !sentCheckFailed) {
+            try {
+                sentCheck = new StreakSentCheck(loader);
+            } catch (Throwable error) {
+                sentCheckFailed = true;
+                RuntimeLog.log("streak sent check unavailable: " + error.getClass().getSimpleName() + " " + error.getMessage());
+            }
+        }
+        StreakSentCheck check = sentCheck;
+        return check == null ? StreakSentCheck.Answer.UNKNOWN : check.check(account, candidate.conversation, candidate.before);
     }
 
     private static List<StreakApi.Candidate> candidates(List<?> items, String account) throws Exception {

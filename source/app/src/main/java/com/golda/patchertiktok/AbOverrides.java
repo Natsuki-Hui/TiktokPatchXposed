@@ -36,10 +36,10 @@ final class AbOverrides {
 
     private static void collect() {
         if (Prefs.on(Prefs.ADS)) {
+            // Only keys TikTok 47.1.4 still reads through these managers; feed and rendered ads are
+            // removed from the models elsewhere.
             for (String key : new String[]{"enable_normal_splash_ad", "enable_normal_splash_ad_ab", "splash_ad_enable",
-                    "enable_live_splash", "aweme_splash_first_launch_enabled", "splash_show",
-                    "enable_splash_show_count_for_empty", "is_enable_splash_first_show_retrieval",
-                    "enable_feed_ad", "enable_video_ad", "ad_banner_enable", "commerce_enable"}) {
+                    "aweme_splash_first_launch_enabled", "enable_splash_show_count_for_empty"}) {
                 VALUES.put(key, false);
             }
         }
@@ -48,6 +48,8 @@ final class AbOverrides {
             VALUES.put("repost_support_reply", 1);
             VALUES.put("repost_support_digg", 1);
         }
+        // Only the own-author gate of Repost; TikTok's other repost permissions still apply.
+        if (Prefs.on(Prefs.SELF_REPOST)) VALUES.put("enable_self_repost", 1);
         if (Prefs.on(Prefs.NEW_PROFILE)) {
             VALUES.put("profile_bg_in_allow_list", 1);
             VALUES.put("profile_bg_enable_consumption_group", 3);
@@ -77,11 +79,10 @@ final class AbOverrides {
             VALUES.put("audio_comment_publish", 1);
             VALUES.put("comment_enable_live_photo", 1);
             VALUES.put("comment_by_shooting", 1);
-            VALUES.put("comment_sort_opt_style", 1);
+            // The sort menu's full set of choices is gated on exactly 2.
+            VALUES.put("comment_sort_opt_style", 2);
             VALUES.put("comment_hate_opt", 1);
             VALUES.put("tt_comment_hate_animation_opt", 2);
-            VALUES.put("dm_customize_message_bubble", 1);
-            VALUES.put("im_contacts_multi_select_limit", 999);
             VALUES.put("inbox_bb_archive_enable", 1);
             VALUES.put("background_play_enable", 1);
             VALUES.put("fyp_auto_scroll", 1);

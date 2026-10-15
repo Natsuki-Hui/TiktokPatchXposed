@@ -46,6 +46,17 @@ final class Module {
         // Every process: the settings screen and the restart trampoline are swapped in here.
         run("settings host", SettingsEntry::installHost);
         Hooks.findAndHook(Application.class, "attach", Context.class, new Hooks.Hook() {
+            @Override protected void before(Hooks.Call param) {
+                // TikTok loads and caches its fonts while attaching, so the font goes in first.
+                if (!main || !(param.args[0] instanceof Context)) return;
+                Context base = (Context) param.args[0];
+                Prefs.load(base);
+                if (Prefs.on(Prefs.FONT)) {
+                    run("code index", () -> Discovery.init(base));
+                    run("font", () -> FontSwap.install(base, loader));
+                }
+            }
+
             @Override protected void after(Hooks.Call param) {
                 if (STARTED.compareAndSet(false, true)) startup((Application) param.thisObject, loader, main);
             }
@@ -69,6 +80,8 @@ final class Module {
         if (!main) return;
         run("language", () -> I18n.use(app.getResources().getConfiguration().getLocales().get(0)));
         run("code index", () -> Discovery.init(app));
+        run("friend card", () -> FeedFilter.installCardInsertion(loader));
+        run("unmute", () -> Unmute.install(loader));
         run("comment translation", () -> {
             Runnable configure = () -> CommentTranslate.configure(Prefs.on(Prefs.AUTO_TRANSLATE), Prefs.text(Prefs.TRANSLATE_EXCLUDE));
             configure.run();
