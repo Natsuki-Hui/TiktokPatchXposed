@@ -86,6 +86,10 @@ public final class ModSettingsActivity extends Activity {
         setupWindow();
 
         root = new FrameLayout(this);
+        // The settings UI is hosted inside TikTok, so apply direction explicitly for Arabic.
+        // START/END gravities and relative padding then mirror naturally in RTL.
+        root.setLayoutDirection("ar".equals(locale.getLanguage()) ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
+        root.setTextDirection("ar".equals(locale.getLanguage()) ? View.TEXT_DIRECTION_RTL : View.TEXT_DIRECTION_LTR);
         root.setBackgroundColor(palette.background);
         stack = new FrameLayout(this);
         root.addView(stack, new FrameLayout.LayoutParams(-1, -1));
