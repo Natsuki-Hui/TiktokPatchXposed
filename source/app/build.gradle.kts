@@ -18,7 +18,7 @@ android {
     }
     androidResources {
         // UI strings live in code; only the LSPosed description is localized as a resource.
-        localeFilters += listOf("en", "ru", "uk", "be", "de", "es", "pt", "fr", "it", "pl", "tr", "in")
+        localeFilters += listOf("en", "ru", "uk", "be", "de", "es", "pt", "fr", "it", "pl", "tr", "in", "ar")
     }
 
     buildTypes {
