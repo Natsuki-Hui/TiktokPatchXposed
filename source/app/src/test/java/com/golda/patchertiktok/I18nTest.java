@@ -18,9 +18,14 @@ public class I18nTest {
     }
 
     @Test
-    public void unknownLanguageFallsBackToEnglish() {
+    public void arabicHasItsOwnTable() {
         I18n.use(new Locale("ar"));
         assertEquals("حظر الإعلانات", I18n.get(I18n.S.ADS));
+        I18n.use(Locale.ENGLISH);
+    }
+
+    @Test
+    public void unknownLanguageFallsBackToEnglish() {
         I18n.use(new Locale("ja"));
         assertEquals("Block ads", I18n.get(I18n.S.ADS));
         I18n.use(new Locale("kk"));

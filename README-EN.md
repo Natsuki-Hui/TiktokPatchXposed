@@ -7,8 +7,8 @@ turns on features TikTok rolls out only to some people, and adds many small thin
 everywhere, your own color, font and AMOLED theme, hiding parts of the screen, country flags,
 invisible mode and auto streaks. All settings live right inside TikTok.
 
-Current version: **4.2.0**. Tested on **TikTok 47.1.4** (Google Play and universal APK) and the
-**47.1.16** beta, **Android 16**. Most features find what they need in TikTok by themselves, so
+Current version: **4.3.0**. Tested on **TikTok 47.4.3** and **47.1.4** (Google Play and universal APK),
+**Android 16**. Most features find what they need in TikTok by themselves, so
 they survive TikTok updates.
 
 <details>
@@ -36,7 +36,7 @@ they survive TikTok updates.
 3. Force-stop TikTok and open it again.
 
 **Settings:** TikTok → Profile → ☰ → Settings and privacy → **TiktokPatchXposed** (the first row).
-The screen is translated into 11 languages and follows TikTok's language. When a setting needs a
+The screen is translated into 12 languages (Arabic included) and follows TikTok's language. When a setting needs a
 restart, a "Restart" button appears at the bottom. To update, install the new APK over the old
 one; settings are kept.
 
@@ -54,7 +54,9 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **Own filter**: by words, hashtags, authors, minimum likes and views.
 
 ### Playback
-- **Auto-scroll everywhere**: in profiles, search, following and chats; photo posts by music length.
+- **Auto-scroll everywhere**: in search, following and chats (profiles don't scroll by themselves); photo posts by music length.
+- **3× speed** in TikTok's own speed menu.
+- **Screen refresh rate**: hold 60, 90 or 120 Hz; TikTok no longer lowers it to the video's frame rate.
 - **Own speeds** and **remember speed**.
 - **Resume where you left off**, **keep "Clear display"**, **seek bar everywhere**.
 - 🧪 **Sound in muted videos**: brings back sound TikTok turned off over copyright, if the video still has it.
@@ -66,19 +68,25 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **Hide elements**: side buttons, the music disc, author and caption, the Tako button.
 - **Interface opacity** and **OLED burn-in protection**.
 - **New profile layout**, **hide stories in the Inbox**.
+- **Time on messages**: under every chat message.
+- **"Read all"**: hold the Inbox tab.
 
 ### Comments
 - **Auto-translate comments** with TikTok's own translator, with languages to skip.
 - **Copy text only**, **author's country** (a flag next to the video date and in profiles).
 - **Comment reposts**; 🧪 **repost your own videos**.
+- 🧪 **Up to 9 photos in a comment**.
 
 ### Downloads and links
 - **No watermark**, **download any video**, **quality picker** and "Audio only".
-- **All photos from a carousel**, **stickers and photos from comments**.
+- **All photos from a carousel**, **stickers and photos from comments**, **stickers from chats**.
+- **Save stories and highlights** (hold a story) and **profile photos** (hold the enlarged photo).
+- 🧪 **Upload in HD**, as with TikTok's "Upload HD" switched on, and a 🧪 bitrate choice: 12, 20 or 30 Mbit/s.
 - **Clean links** (no tracking), **links in your browser**, **screenshots everywhere**.
 
 ### Privacy
-- 🧪 **Invisible mode**: not showing up in story, profile and video views.
+- 🧪 **Invisible mode**: not showing up in story (and highlight), profile and video views.
+- **In chats:** hide "typing…", 🧪 "online" and 🧪 "Read" (with "Mark as read" in a message's menu).
 - 🧪 **Block location**, 🧪 **hide VPN**, 🧪 **random device ID**.
 
 ### Region
@@ -95,10 +103,11 @@ The module doesn't change the account's region or your IP address, so the result
 
 ### Experiments
 - **Hidden TikTok features**: hold-to-speed-up, audio and photo comments, comments to favorites and more.
-- 🧪 **No forced login**.
+- 🧪 **No forced login**, 🧪 **no hashtag limit**, 🧪 **camera extras** (teleprompter, green screen).
 
 ### Settings screen
-Search across settings, "Feature status" (what was found in your TikTok version), export and import.
+Search across settings, "Feature status" (what was found in your TikTok version), export and import
+of settings as a `.json` file.
 </details>
 
 <details>

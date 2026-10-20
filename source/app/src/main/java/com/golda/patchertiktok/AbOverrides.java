@@ -69,6 +69,18 @@ final class AbOverrides {
                 VALUES.put(key, true);
             }
         }
+        // Group 2 is the one whose keyboard takes up to nine pictures.
+        if (Prefs.on(Prefs.COMMENT_PHOTOS)) VALUES.put("comment_multi_photo_group", 2);
+        // The publish screen's hashtag guard is off, and its cap high if another check reads it.
+        if (Prefs.on(Prefs.NO_HASHTAG_LIMIT)) {
+            VALUES.put("studio_publish_limit_hashtag_switch", false);
+            VALUES.put("studio_publish_hashtag_max_limit", 999);
+        }
+        if (Prefs.on(Prefs.SPEED_3X)) VALUES.put("feed_support_3x_speed", true);
+        if (Prefs.on(Prefs.CAMERA_EXTRAS)) {
+            VALUES.put("camera_teleprompter_mode", 1);
+            VALUES.put("video_capture_green_screen_standalone", true);
+        }
         if (Prefs.on(Prefs.EXTRA_FEATURES)) {
             VALUES.put("long_press_speed_up_enable", true);
             VALUES.put("long_press_speed_up_lock", 120);

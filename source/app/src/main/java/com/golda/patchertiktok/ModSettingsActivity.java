@@ -64,6 +64,8 @@ public final class ModSettingsActivity extends Activity {
     /** Rebuilds the font sheet's rows after a file is picked. */
     private Runnable fontChanged;
     private static final int PICK_FONT = 41;
+    private static final int SAVE_BACKUP = 42;
+    private static final int OPEN_BACKUP = 43;
     private int topInset;
     private int bottomInset;
 
@@ -458,6 +460,7 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.REMEMBER_SPEED, S.REMEMBER_SPEED_DESC, Prefs.REMEMBER_SPEED),
             new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.RESUME_POSITION, S.RESUME_POSITION_DESC, Prefs.RESUME_POSITION),
             new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.UNMUTE, S.UNMUTE_DESC, Prefs.UNMUTE),
+            new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.SPEED_3X, S.SPEED_3X_DESC, Prefs.SPEED_3X),
             new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.REMEMBER_CLEAN, S.REMEMBER_CLEAN_DESC, Prefs.REMEMBER_CLEAN),
             new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.SEEKBAR, S.SEEKBAR_DESC, Prefs.SEEKBAR),
             new Setting(Category.INTERFACE, S.GROUP_COLORS, S.ACCENT, S.ACCENT_DESC, Prefs.ACCENT),
@@ -465,22 +468,32 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.INTERFACE, S.GROUP_SCREEN, S.BURN_IN, S.BURN_IN_DESC, Prefs.BURN_IN),
             new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.NEW_PROFILE, S.NEW_PROFILE_DESC, Prefs.NEW_PROFILE),
             new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.HIDE_INBOX_STORIES, S.HIDE_INBOX_STORIES_DESC, Prefs.HIDE_INBOX_STORIES),
+            new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.MESSAGE_TIME, S.MESSAGE_TIME_DESC, Prefs.MESSAGE_TIME),
+            new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.READ_ALL, S.READ_ALL_DESC, Prefs.READ_ALL),
             new Setting(Category.SOCIAL, null, S.COPY_COMMENT, S.COPY_COMMENT_DESC, Prefs.COPY_COMMENT_TEXT),
             new Setting(Category.SOCIAL, null, S.AUTO_TRANSLATE, S.AUTO_TRANSLATE_DESC, Prefs.AUTO_TRANSLATE),
             new Setting(Category.SOCIAL, null, S.COMMENT_REPOSTS, S.COMMENT_REPOSTS_DESC, Prefs.COMMENT_REPOSTS),
             new Setting(Category.SOCIAL, null, S.SELF_REPOST, S.SELF_REPOST_DESC, Prefs.SELF_REPOST),
+            new Setting(Category.SOCIAL, null, S.COMMENT_PHOTOS, S.COMMENT_PHOTOS_DESC, Prefs.COMMENT_PHOTOS),
             new Setting(Category.SOCIAL, null, S.AUTHOR_REGION, S.AUTHOR_REGION_DESC, Prefs.AUTHOR_REGION),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.NO_WATERMARK, null, Prefs.NO_WATERMARK),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.DOWNLOAD_ANY, S.DOWNLOAD_ANY_DESC, Prefs.DOWNLOAD_ANY),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.QUALITY_PICKER, S.QUALITY_PICKER_DESC, Prefs.QUALITY_PICKER),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.SAVE_ALL_PHOTOS, S.SAVE_ALL_PHOTOS_DESC, Prefs.SAVE_ALL_PHOTOS),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.COMMENT_MEDIA, S.COMMENT_MEDIA_DESC, Prefs.COMMENT_MEDIA),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.STORY_DOWNLOAD, S.STORY_DOWNLOAD_DESC, Prefs.STORY_DOWNLOAD),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.AVATAR_DOWNLOAD, S.AVATAR_DOWNLOAD_DESC, Prefs.AVATAR_DOWNLOAD),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.CHAT_STICKER, S.CHAT_STICKER_DESC, Prefs.CHAT_STICKER),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.HD_UPLOAD, S.HD_UPLOAD_DESC, Prefs.HD_UPLOAD),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.CLEAN_LINKS, S.CLEAN_LINKS_DESC, Prefs.CLEAN_LINKS),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.EXTERNAL_BROWSER, S.EXTERNAL_BROWSER_DESC, Prefs.EXTERNAL_BROWSER),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.SCREENSHOTS, S.SCREENSHOTS_DESC, Prefs.SCREENSHOTS),
             new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_STORIES, S.GHOST_STORIES_DESC, Prefs.GHOST_STORIES),
             new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_PROFILE, S.GHOST_PROFILE_DESC, Prefs.GHOST_PROFILE),
             new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_POSTS, S.GHOST_POSTS_DESC, Prefs.GHOST_POSTS),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_TYPING, S.GHOST_TYPING_DESC, Prefs.GHOST_TYPING),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_ONLINE, S.GHOST_ONLINE_DESC, Prefs.GHOST_ONLINE),
+            new Setting(Category.GHOST, S.GROUP_INVISIBLE, S.GHOST_READ, S.GHOST_READ_DESC, Prefs.GHOST_READ),
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.BLOCK_LOCATION, S.BLOCK_LOCATION_DESC, Prefs.BLOCK_LOCATION),
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.HIDE_VPN, S.HIDE_VPN_DESC, Prefs.HIDE_VPN),
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.SPOOF_ANDROID_ID, S.SPOOF_ANDROID_ID_DESC, Prefs.SPOOF_ANDROID_ID),
@@ -488,6 +501,8 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.STREAKS, null, S.AUTO_STREAK, S.AUTO_STREAK_DESC, Prefs.AUTO_STREAK),
             new Setting(Category.LAB, null, S.EXTRA_FEATURES, S.EXTRA_FEATURES_DESC, Prefs.EXTRA_FEATURES),
             new Setting(Category.LAB, null, S.NO_LOGIN_WALL, S.NO_LOGIN_WALL_DESC, Prefs.NO_LOGIN_WALL),
+            new Setting(Category.LAB, null, S.NO_HASHTAG_LIMIT, S.NO_HASHTAG_LIMIT_DESC, Prefs.NO_HASHTAG_LIMIT),
+            new Setting(Category.LAB, null, S.CAMERA_EXTRAS, S.CAMERA_EXTRAS_DESC, Prefs.CAMERA_EXTRAS),
     };
 
     private View mainPage() {
@@ -513,7 +528,7 @@ public final class ModSettingsActivity extends Activity {
         groups.addView(new View(this), gap);
         LinearLayout about = card(groups);
         navigation(about, I18n.get(S.VERSION), BuildConfig.VERSION_NAME, null);
-        navigation(about, I18n.get(S.BACKUP_EXPORT), null, view -> exportSettings());
+        navigation(about, I18n.get(S.BACKUP_EXPORT), null, view -> openSheet(exportSheet()));
         navigation(about, I18n.get(S.BACKUP_IMPORT), null, view -> push(importPage(), true));
         navigation(about, I18n.get(S.SOURCE_CODE), null, view -> {
             try {
@@ -595,7 +610,10 @@ public final class ModSettingsActivity extends Activity {
         bar.addView(track, new FrameLayout.LayoutParams(-1, dp(3)));
         View fill = new View(this);
         fill.setBackground(rounded(palette.trackOn, dp(2)));
+        // The bar grows from the start edge, which is the right one in RTL.
         fill.setPivotX(0);
+        fill.addOnLayoutChangeListener((view, l, t, r, b, ol, ot, or, ob) ->
+                view.setPivotX(view.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? r - l : 0));
         bar.addView(fill, new FrameLayout.LayoutParams(-1, dp(3)));
         LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(-1, dp(3));
         barParams.setMargins(dp(26), 0, dp(26), dp(22));
@@ -814,7 +832,7 @@ public final class ModSettingsActivity extends Activity {
         search.setSingleLine(true);
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        search.setPadding(dp(8), 0, 0, 0);
+        search.setPaddingRelative(dp(8), 0, 0, 0);
         searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(46), 1));
         LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(-1, dp(46));
         boxParams.setMargins(dp(16), dp(10), dp(16), dp(12));
@@ -956,12 +974,21 @@ public final class ModSettingsActivity extends Activity {
             subOption(dim);
             syncs.add(() -> dim.setVisibility(Prefs.on(Prefs.BURN_IN) ? View.VISIBLE : View.GONE));
             navigation(card, I18n.get(S.HIDE_PARTS), null, view -> push(hidePage(), true));
+            TextView rate = navigation(card, I18n.get(S.REFRESH_RATE), refreshLabel(), view -> openSheet(refreshSheet()));
+            syncs.add(() -> rate.setText(refreshLabel()));
         } else if (Prefs.ACCENT.equals(key)) {
             TextView value = navigation(card, I18n.get(S.ACCENT_PICK), null, view -> push(colorPage(), true));
             View row = (View) value.getParent();
             syncs.add(() -> {
                 value.setCompoundDrawablesRelative(swatch((int) Prefs.number(Prefs.ACCENT_COLOR), dp(22)), null, null, null);
                 row.setVisibility(Prefs.on(Prefs.ACCENT) ? View.VISIBLE : View.GONE);
+            });
+        } else if (Prefs.HD_UPLOAD.equals(key)) {
+            TextView value = navigation(card, I18n.get(S.HD_BITRATE), bitrateLabel(), view -> openSheet(bitrateSheet()));
+            View row = (View) value.getParent();
+            syncs.add(() -> {
+                value.setText(bitrateLabel());
+                row.setVisibility(Prefs.on(Prefs.HD_UPLOAD) ? View.VISIBLE : View.GONE);
             });
         } else if (Prefs.AMOLED.equals(key)) {
             TextView value = navigation(card, I18n.get(S.FONT), fontLabel(), view -> openSheet(fontSheet()));
@@ -1226,6 +1253,68 @@ public final class ModSettingsActivity extends Activity {
         return content;
     }
 
+    private String refreshLabel() {
+        long rate = Prefs.number(Prefs.REFRESH_RATE);
+        return rate <= 0 ? I18n.get(S.FONT_TIKTOK) : String.format(locale, I18n.get(S.REFRESH_HZ), rate);
+    }
+
+    /** TikTok's own choice and every rate the screen offers, as a single-choice list. */
+    private View refreshSheet() {
+        List<Integer> choices = new ArrayList<>();
+        choices.add(0);
+        choices.addAll(RefreshRate.rates(this));
+        return choiceSheet(Prefs.REFRESH_RATE, choices,
+                hz -> hz == 0 ? I18n.get(S.FONT_TIKTOK) : String.format(locale, I18n.get(S.REFRESH_HZ), hz), S.REFRESH_FOOTER,
+                // This screen is a TikTok window too, so the new rate shows here at once.
+                () -> getWindow().setAttributes(getWindow().getAttributes()));
+    }
+
+    private String bitrateLabel() {
+        long mbps = Prefs.number(Prefs.HD_BITRATE);
+        return mbps <= 0 ? I18n.get(S.FONT_TIKTOK) : String.format(locale, I18n.get(S.HD_MBPS), mbps);
+    }
+
+    private View bitrateSheet() {
+        List<Integer> choices = new ArrayList<>();
+        for (int mbps : HdUpload.CHOICES) choices.add(mbps);
+        return choiceSheet(Prefs.HD_BITRATE, choices,
+                mbps -> mbps == 0 ? I18n.get(S.FONT_TIKTOK) : String.format(locale, I18n.get(S.HD_MBPS), mbps), S.HD_BITRATE_DESC, null);
+    }
+
+    /** A single-choice list of numbers stored under {@code key}, with a note under it. */
+    private View choiceSheet(String key, List<Integer> choices, java.util.function.IntFunction<String> label, S note,
+            Runnable picked) {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        List<ImageView> marks = new ArrayList<>();
+        Runnable render = () -> {
+            long chosen = Prefs.number(key);
+            for (int index = 0; index < marks.size(); index++) marks.get(index).setImageDrawable(radio(choices.get(index) == chosen));
+        };
+        for (int value : choices) {
+            LinearLayout row = row(content);
+            texts(row, label.apply(value), null);
+            ImageView mark = new ImageView(this);
+            row.addView(mark, new LinearLayout.LayoutParams(dp(22), dp(22)));
+            marks.add(mark);
+            row.setOnClickListener(view -> {
+                row.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                Prefs.setNumber(key, value);
+                if (picked != null) picked.run();
+                render.run();
+            });
+        }
+        TextView footer = new TextView(this);
+        footer.setText(I18n.get(note));
+        footer.setTextColor(palette.textTertiary);
+        footer.setTextSize(13);
+        footer.setTypeface(Fonts.regular(this));
+        footer.setPadding(dp(18), dp(8), dp(18), dp(6));
+        content.addView(footer);
+        render.run();
+        return content;
+    }
+
     private GradientDrawable radio(boolean on) {
         GradientDrawable circle = new GradientDrawable();
         circle.setShape(GradientDrawable.OVAL);
@@ -1254,7 +1343,12 @@ public final class ModSettingsActivity extends Activity {
     @Override
     protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
-        if (request != PICK_FONT || result != RESULT_OK || data == null || data.getData() == null) return;
+        if (result != RESULT_OK || data == null || data.getData() == null) return;
+        if (request == SAVE_BACKUP || request == OPEN_BACKUP) {
+            backupFile(request, data.getData());
+            return;
+        }
+        if (request != PICK_FONT) return;
         Uri uri = data.getData();
         String name = displayName(uri);
         new Thread(() -> {
@@ -1359,15 +1453,90 @@ public final class ModSettingsActivity extends Activity {
         return Integer.parseInt(hex, 16);
     }
 
-    private void exportSettings() {
+    /** Save to a .json file or copy as text. */
+    private View exportSheet() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout save = row(content);
+        texts(save, I18n.get(S.BACKUP_SAVE_FILE), "TiktokPatchXposed-settings.json");
+        save.setOnClickListener(view -> {
+            closeSheet();
+            Intent create = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/json").putExtra(Intent.EXTRA_TITLE, "TiktokPatchXposed-settings.json");
+            try {
+                startActivityForResult(create, SAVE_BACKUP);
+            } catch (RuntimeException unavailable) {
+                copySettings();
+            }
+        });
+        LinearLayout copy = row(content);
+        texts(copy, I18n.get(S.BACKUP_COPY), null);
+        copy.setOnClickListener(view -> {
+            closeSheet();
+            copySettings();
+        });
+        return content;
+    }
+
+    private void copySettings() {
         String json = Prefs.export();
         android.content.ClipboardManager clipboard = getSystemService(android.content.ClipboardManager.class);
         if (clipboard != null) clipboard.setPrimaryClip(android.content.ClipData.newPlainText("TiktokPatchXposed", json));
         android.widget.Toast.makeText(this, I18n.get(S.BACKUP_COPIED), android.widget.Toast.LENGTH_SHORT).show();
-        Intent share = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, json);
+    }
+
+    private void openBackup() {
+        Intent open = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+        open.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/plain", "application/octet-stream"});
         try {
-            startActivity(Intent.createChooser(share, I18n.get(S.BACKUP_EXPORT)));
-        } catch (RuntimeException ignored) { }
+            startActivityForResult(open, OPEN_BACKUP);
+        } catch (RuntimeException unavailable) {
+            android.widget.Toast.makeText(this, I18n.get(S.BACKUP_INVALID), android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** Writes or reads a backup file off the main thread, then reports on it. */
+    private void backupFile(int request, Uri uri) {
+        new Thread(() -> {
+            boolean done;
+            if (request == SAVE_BACKUP) {
+                done = writeText(uri, Prefs.export());
+            } else {
+                String text = readText(uri);
+                done = text != null && Prefs.importJson(text);
+            }
+            runOnUiThread(() -> {
+                S message = request == SAVE_BACKUP ? (done ? S.BACKUP_SAVED : S.DL_FAILED) : (done ? S.BACKUP_DONE : S.BACKUP_INVALID);
+                android.widget.Toast.makeText(this, I18n.get(message), android.widget.Toast.LENGTH_SHORT).show();
+                if (done && request == OPEN_BACKUP) pop();
+            });
+        }, "tpx-backup").start();
+    }
+
+    private boolean writeText(Uri uri, String text) {
+        try (java.io.OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+            if (out == null) return false;
+            out.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return true;
+        } catch (java.io.IOException | RuntimeException error) {
+            return false;
+        }
+    }
+
+    /** At most 1 MB: a backup is a few kilobytes, anything bigger is not one. */
+    private String readText(Uri uri) {
+        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) return null;
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            for (int read; (read = in.read(buffer)) > 0; ) {
+                bytes.write(buffer, 0, read);
+                if (bytes.size() > 1 << 20) return null;
+            }
+            return bytes.toString("UTF-8");
+        } catch (java.io.IOException | RuntimeException error) {
+            return null;
+        }
     }
 
     /** Paste a backup made with "Export settings". */
@@ -1391,6 +1560,7 @@ public final class ModSettingsActivity extends Activity {
         }
         page.content.addView(new View(this), new LinearLayout.LayoutParams(-1, dp(12)));
         LinearLayout actions = page.card();
+        navigation(actions, I18n.get(S.BACKUP_OPEN_FILE), null, view -> openBackup());
         navigation(actions, I18n.get(S.BACKUP_APPLY), null, view -> {
             boolean done = Prefs.importJson(field.getText().toString());
             android.widget.Toast.makeText(this, I18n.get(done ? S.BACKUP_DONE : S.BACKUP_INVALID),
@@ -1722,7 +1892,7 @@ public final class ModSettingsActivity extends Activity {
         search.setSingleLine(true);
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         search.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
-        search.setPadding(dp(8), 0, 0, 0);
+        search.setPaddingRelative(dp(8), 0, 0, 0);
         searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(40), 1));
         LinearLayout.LayoutParams boxParams = new LinearLayout.LayoutParams(-1, dp(40));
         boxParams.setMargins(dp(16), dp(8), dp(16), dp(12));
@@ -1952,7 +2122,8 @@ public final class ModSettingsActivity extends Activity {
 
     /** Settings still being tested on real accounts; they carry a "Beta" mark. */
     private static final String[] BETA_KEYS = {Prefs.NO_LOGIN_WALL, Prefs.BLOCK_LOCATION, Prefs.HIDE_VPN, Prefs.SPOOF_ANDROID_ID,
-            Prefs.UNMUTE, Prefs.SELF_REPOST};
+            Prefs.UNMUTE, Prefs.SELF_REPOST, Prefs.HD_UPLOAD, Prefs.GHOST_ONLINE, Prefs.GHOST_READ,
+            Prefs.COMMENT_PHOTOS, Prefs.NO_HASHTAG_LIMIT, Prefs.CAMERA_EXTRAS};
 
     /**
      * A small mark after a row's title: an outlined "Beta" for settings under test, a plain

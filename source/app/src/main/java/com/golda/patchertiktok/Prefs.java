@@ -39,6 +39,13 @@ final class Prefs {
     static final String GHOST_STORIES = "ghost_stories";
     static final String GHOST_PROFILE = "ghost_profile_views";
     static final String GHOST_POSTS = "ghost_post_views";
+    /** Chats: no "typing…" and no "online" heartbeat. */
+    static final String GHOST_TYPING = "ghost_typing";
+    static final String GHOST_ONLINE = "ghost_online";
+    /** Chats: the read mark is not sent; "Mark as read" sends it on demand. */
+    static final String GHOST_READ = "ghost_read";
+    /** The sent time under each chat message. */
+    static final String MESSAGE_TIME = "message_time";
     /** Hide recommended videos published longer ago than {@link #oldVideoDays()}. */
     static final String OLD_VIDEOS = "hide_old_videos";
     static final String OLD_VIDEO_DAYS = "old_video_days";
@@ -85,6 +92,24 @@ final class Prefs {
     static final String FONT_SOURCE = "custom_font_source";
     /** Name of the imported font file, shown in settings. */
     static final String FONT_FILE = "custom_font_file";
+    /** Screen refresh rate in Hz while TikTok is open; 0 lets TikTok decide. */
+    static final String REFRESH_RATE = "refresh_rate";
+    /** Holding a story or highlight opens the download sheet. */
+    static final String STORY_DOWNLOAD = "story_download";
+    /** Holding the enlarged profile photo saves it in full size. */
+    static final String AVATAR_DOWNLOAD = "avatar_download";
+    /** Holding a sticker in a chat adds "Download sticker" to TikTok's menu. */
+    static final String CHAT_STICKER = "chat_sticker_download";
+    /** Uploads as with TikTok's "Upload HD" switched on. */
+    static final String HD_UPLOAD = "hd_upload";
+    /** With HD upload: the encoder's bitrate floor in Mbit/s; 0 keeps TikTok's. */
+    static final String HD_BITRATE = "hd_upload_mbps";
+    /** TikTok features behind its own experiment flags, read once at start. */
+    static final String READ_ALL = "inbox_read_all";
+    static final String COMMENT_PHOTOS = "comment_multi_photos";
+    static final String NO_HASHTAG_LIMIT = "no_hashtag_limit";
+    static final String SPEED_3X = "speed_3x";
+    static final String CAMERA_EXTRAS = "camera_extras";
     /** The random Android ID shown instead of the real one; made once. */
     static final String ANDROID_ID = "android_id_value";
     /** Languages left untranslated, e.g. "en, uk". */
@@ -95,7 +120,8 @@ final class Prefs {
     static final String DEFAULT_REGION = "de";
 
     /** Keys whose hooks only take effect when TikTok starts. */
-    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID, SELF_REPOST, FONT};
+    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID, SELF_REPOST, FONT,
+            COMMENT_PHOTOS, NO_HASHTAG_LIMIT, SPEED_3X, CAMERA_EXTRAS};
 
     private static final Map<String, Boolean> DEFAULTS = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> FLAGS = new ConcurrentHashMap<>();
@@ -128,6 +154,10 @@ final class Prefs {
         DEFAULTS.put(GHOST_STORIES, false);
         DEFAULTS.put(GHOST_PROFILE, false);
         DEFAULTS.put(GHOST_POSTS, false);
+        DEFAULTS.put(GHOST_TYPING, false);
+        DEFAULTS.put(GHOST_ONLINE, false);
+        DEFAULTS.put(GHOST_READ, false);
+        DEFAULTS.put(MESSAGE_TIME, false);
         DEFAULTS.put(OLD_VIDEOS, false);
         DEFAULTS.put(PROMO, true);
         DEFAULTS.put(AI_CONTENT, false);
@@ -155,6 +185,15 @@ final class Prefs {
         DEFAULTS.put(UNMUTE, false);
         DEFAULTS.put(SELF_REPOST, false);
         DEFAULTS.put(FONT, false);
+        DEFAULTS.put(STORY_DOWNLOAD, false);
+        DEFAULTS.put(AVATAR_DOWNLOAD, false);
+        DEFAULTS.put(CHAT_STICKER, false);
+        DEFAULTS.put(HD_UPLOAD, false);
+        DEFAULTS.put(READ_ALL, false);
+        DEFAULTS.put(COMMENT_PHOTOS, false);
+        DEFAULTS.put(NO_HASHTAG_LIMIT, false);
+        DEFAULTS.put(SPEED_3X, false);
+        DEFAULTS.put(CAMERA_EXTRAS, false);
         // Automated messages are opt-in only.
         DEFAULTS.put(AUTO_STREAK, false);
     }
@@ -178,13 +217,15 @@ final class Prefs {
         for (String key : new String[]{FILTER_MIN_LIKES, FILTER_MIN_VIEWS}) NUMBERS.put(key, loaded.getLong(key, 0));
         NUMBERS.put(ACCENT_COLOR, loaded.getLong(ACCENT_COLOR, DEFAULT_ACCENT));
         NUMBERS.put(OVERLAY_OPACITY, loaded.getLong(OVERLAY_OPACITY, 100));
+        NUMBERS.put(REFRESH_RATE, loaded.getLong(REFRESH_RATE, 0));
+        NUMBERS.put(HD_BITRATE, loaded.getLong(HD_BITRATE, 0));
         rebuildRules();
     }
 
     /** Text strings, numbers and the region, besides the switches in {@link #DEFAULTS}. */
     private static final String[] TEXT_KEYS = {REGION, FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE,
             STREAK_STICKER, STREAK_STICKER_TITLE};
-    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY};
+    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY, REFRESH_RATE, HD_BITRATE};
 
     /** All settings as JSON, for a backup the user keeps wherever they like. */
     static String export() {
@@ -200,7 +241,11 @@ final class Prefs {
         } catch (org.json.JSONException ignored) {
             // Keys and values are plain; this does not happen.
         }
-        return json.toString();
+        try {
+            return json.toString(2);
+        } catch (org.json.JSONException error) {
+            return json.toString();
+        }
     }
 
     /** Applies a backup from {@link #export()}; unknown keys are ignored. False if it is not one. */

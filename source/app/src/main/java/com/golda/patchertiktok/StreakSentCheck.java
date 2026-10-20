@@ -80,7 +80,7 @@ final class StreakSentCheck {
     }
 
     /** What the service hands out for TikTok's social inbox (TIKTOK_SOCIAL_IM), one per method that takes it. */
-    private static List<Object> socialObjects(Object service) throws ReflectiveOperationException {
+    static List<Object> socialObjects(Object service) throws ReflectiveOperationException {
         List<Object> found = new ArrayList<>();
         for (Method method : service.getClass().getMethods()) {
             Class<?>[] p = method.getParameterTypes();

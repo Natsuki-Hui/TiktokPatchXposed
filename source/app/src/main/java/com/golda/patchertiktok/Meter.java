@@ -39,9 +39,11 @@ final class Meter extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         float size = size();
+        boolean rtl = getLayoutDirection() == LAYOUT_DIRECTION_RTL;
         for (int index = 0; index < total; index++) {
             paint.setColor(index < filled ? on : off);
-            canvas.drawCircle(index * size * 1.8f + size / 2f, size / 2f, size / 2f, paint);
+            float x = index * size * 1.8f + size / 2f;
+            canvas.drawCircle(rtl ? getWidth() - x : x, size / 2f, size / 2f, paint);
         }
     }
 }

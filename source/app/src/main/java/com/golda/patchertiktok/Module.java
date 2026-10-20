@@ -41,6 +41,11 @@ final class Module {
             run("clean links", CleanLinks::install);
             run("rendered ads", () -> RenderedAdSkip.install(loader));
             run("invisible mode", () -> Ghost.install(loader));
+            run("refresh rate", RefreshRate::install);
+            run("story download", () -> StoryDownload.install(loader));
+            run("avatar download", () -> AvatarDownload.install(loader));
+            run("message time", () -> MessageTime.install(loader));
+            run("chat menu", () -> ChatMenu.install(loader));
             run("google login", () -> googleLoginFix(loader));
         }
         // Every process: the settings screen and the restart trampoline are swapped in here.
@@ -66,6 +71,7 @@ final class Module {
     /** Runs once the Application context exists, before TikTok's own onCreate. */
     private static void startup(Application app, ClassLoader loader, boolean main) {
         Prefs.load(app);
+        if (main) Overlay.settingsLoaded();
         if (main) run("accent color", () -> {
             AccentColor.install();
             AccentColor.installFor(app);
@@ -82,6 +88,9 @@ final class Module {
         run("code index", () -> Discovery.init(app));
         run("friend card", () -> FeedFilter.installCardInsertion(loader));
         run("unmute", () -> Unmute.install(loader));
+        run("hd upload", () -> HdUpload.install(loader));
+        run("read receipts", () -> ReadReceipts.install(loader));
+        run("read all", () -> InboxReadAll.install(loader));
         run("comment translation", () -> {
             Runnable configure = () -> CommentTranslate.configure(Prefs.on(Prefs.AUTO_TRANSLATE), Prefs.text(Prefs.TRANSLATE_EXCLUDE));
             configure.run();

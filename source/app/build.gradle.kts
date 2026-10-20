@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
 }
 
@@ -10,8 +10,8 @@ android {
         applicationId = "com.golda.patchertiktok"
         minSdk = 27
         targetSdk = 36
-        versionCode = 46
-        versionName = "4.2.0"
+        versionCode = 47
+        versionName = "4.3.0"
     }
     buildFeatures {
         buildConfig = true

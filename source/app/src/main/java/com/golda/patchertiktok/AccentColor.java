@@ -20,10 +20,10 @@ final class AccentColor {
     static final int BRAND = 0xFE2C55;
     /**
      * The red and its other shades, all replaced: lighter dark-theme ones (icons, a liked comment's
-     * count) and the orange-red of your own @name on the profile. TikTok's pinker reds stay: they
-     * color the streak flames.
+     * count), the orange-red of your own @name on the profile, and the big heart of a double-tap
+     * like with the deeper red it starts from. TikTok's pinker reds stay: they color the streak flames.
      */
-    private static final int[] BRANDS = {BRAND, 0xFF3B5C, 0xFF576F, 0xFF5B48};
+    private static final int[] BRANDS = {BRAND, 0xFF3B5C, 0xFF576F, 0xFF5B48, 0xFF3059, 0xF51230};
     /** TikTok's icons drawn from pictures: the follow "+" under the avatar is a red and white bitmap. */
     private static final String TUX_ICON = "com.bytedance.tux.drawable.TuxIconDrawable";
 
