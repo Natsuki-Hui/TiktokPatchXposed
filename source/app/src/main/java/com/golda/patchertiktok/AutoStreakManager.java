@@ -36,6 +36,8 @@ final class AutoStreakManager {
     private static volatile StreakSentCheck sentCheck;
     private static volatile boolean sentCheckFailed;
     private static boolean lastEnabled;
+    private static long lastTime;
+    private static String lastExcluded = "";
 
     private AutoStreakManager() { }
 
@@ -45,6 +47,8 @@ final class AutoStreakManager {
         StreakApi.capture(classLoader);
         StreakSentCheck.capture(classLoader);
         lastEnabled = enabled();
+        lastTime = Prefs.number(Prefs.STREAK_TIME);
+        lastExcluded = Prefs.on(Prefs.STREAK_ONLY_SELECTED) + Prefs.text(Prefs.STREAK_EXCLUDED);
         Prefs.listen(() -> MAIN.post(AutoStreakManager::onSettingsChanged));
         app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
             private int started;
@@ -69,10 +73,16 @@ final class AutoStreakManager {
 
     private static void onSettingsChanged() {
         boolean now = enabled();
-        if (now == lastEnabled) return;
+        long time = Prefs.number(Prefs.STREAK_TIME);
+        String excluded = Prefs.on(Prefs.STREAK_ONLY_SELECTED) + Prefs.text(Prefs.STREAK_EXCLUDED);
+        boolean refined = time != lastTime || !excluded.equals(lastExcluded);
+        lastTime = time;
+        lastExcluded = excluded;
+        if (now == lastEnabled && !(now && refined)) return;
         lastEnabled = now;
         if (!now) stop();
-        else if (foreground) schedule(openDelay());
+        // A new time or recipient list is looked at on the next check, not the moment it is picked.
+        else if (foreground && !RUNNING.get()) schedule(openDelay());
     }
 
     private static void onForeground() {
@@ -151,9 +161,24 @@ final class AutoStreakManager {
         int confirmed = 0;
         int unresolved = 0;
         int skipped = 0;
+        int waiting = 0;
+        long waitUntil = Long.MAX_VALUE;
+        java.util.Set<String> excluded = excluded();
+        int minute = StreakTiming.minuteOfDay(Prefs.number(Prefs.STREAK_TIME));
         for (StreakApi.Candidate initial : candidates) {
             if (Thread.currentThread().isInterrupted() || !foreground || !enabled()) break;
             if (!account.equals(api.account())) break;
+            if (excluded.contains(initial.conversation)) {
+                skipped++;
+                continue;
+            }
+            long when = StreakTiming.sendAt(System.currentTimeMillis(), StreakKeys.seconds(initial.end) * 1000L,
+                    minute, java.util.TimeZone.getDefault());
+            if (when > 0) {
+                waitUntil = Math.min(waitUntil, when);
+                waiting++;
+                continue;
+            }
             // Re-read before dispatch: a manual message may already have renewed the streak.
             StreakApi.Candidate current = null;
             List<?> fresh = api.items();
@@ -200,8 +225,52 @@ final class AutoStreakManager {
         for (Object item : items) next = Math.min(next, api.nextRiskMillis(item, now));
         RuntimeLog.log("streak check: records=" + items.size() + " " + api.summary(items, now)
                 + " eligible=" + candidates.size() + " confirmed=" + confirmed + " unresolved=" + unresolved
-                + " skipped=" + skipped + (next == Long.MAX_VALUE ? "" : " nextRiskIn=" + (next - now) / 60_000L + "m"));
-        if (next != Long.MAX_VALUE) schedule(Math.max(MIN_CHECK_INTERVAL_MS, next - now + between(60_000L, 600_000L)));
+                + " skipped=" + skipped + " waiting=" + waiting
+                + (next == Long.MAX_VALUE ? "" : " nextRiskIn=" + (next - now) / 60_000L + "m")
+                + (waitUntil == Long.MAX_VALUE ? "" : " sendIn=" + (waitUntil - now) / 60_000L + "m"));
+        long delay = Long.MAX_VALUE;
+        if (next != Long.MAX_VALUE) delay = Math.max(MIN_CHECK_INTERVAL_MS, next - now + between(60_000L, 600_000L));
+        // The chosen time: a minute or two after it, like opening the chat when the reminder rings.
+        if (waitUntil != Long.MAX_VALUE) delay = Math.min(delay, Math.max(60_000L, waitUntil - now + between(30_000L, 150_000L)));
+        if (delay != Long.MAX_VALUE) schedule(delay);
+    }
+
+    static ClassLoader loader() { return loader; }
+
+    /** A one-to-one chat with a streak, for the recipients list. */
+    static final class Partner {
+        final String conversation;
+        final String peer;
+        final long days;
+
+        Partner(String conversation, String peer, long days) {
+            this.conversation = conversation;
+            this.peer = peer;
+            this.days = days;
+        }
+    }
+
+    /** Current streak chats, longest first; null when TikTok's streak data is not loaded yet. Off the main thread. */
+    static List<Partner> partners() {
+        try {
+            ensureBindings();
+            String account = api.account();
+            List<?> items = api.items();
+            if (account == null || items == null) return null;
+            return api.partners(items, account);
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    /** Conversations the user took out of auto streaks; none while "everyone" is chosen. */
+    static java.util.Set<String> excluded() {
+        java.util.Set<String> result = new java.util.HashSet<>();
+        if (!Prefs.on(Prefs.STREAK_ONLY_SELECTED)) return result;
+        for (String id : Prefs.text(Prefs.STREAK_EXCLUDED).split(",")) {
+            if (!id.trim().isEmpty()) result.add(id.trim());
+        }
+        return result;
     }
 
     /** UNKNOWN when TikTok's history cannot be read; the flame then goes as before. */

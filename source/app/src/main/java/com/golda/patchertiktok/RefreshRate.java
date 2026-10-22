@@ -134,7 +134,23 @@ final class RefreshRate {
         return best;
     }
 
+    /** TikTok sets its window's attributes on every video; the screen's modes are asked a few seconds apart at most. */
+    private static volatile List<Display.Mode> cached;
+    private static volatile long cachedAt;
+
     private static List<Display.Mode> modes(Context context) {
+        long now = android.os.SystemClock.elapsedRealtime();
+        List<Display.Mode> recent = cached;
+        if (recent != null && now - cachedAt < 5_000L) return recent;
+        List<Display.Mode> modes = read(context);
+        if (!modes.isEmpty()) {
+            cached = modes;
+            cachedAt = now;
+        }
+        return modes;
+    }
+
+    private static List<Display.Mode> read(Context context) {
         List<Display.Mode> modes = new ArrayList<>();
         try {
             DisplayManager displays = context == null ? null : context.getSystemService(DisplayManager.class);

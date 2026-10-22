@@ -77,6 +77,12 @@ final class AbOverrides {
             VALUES.put("studio_publish_hashtag_max_limit", 999);
         }
         if (Prefs.on(Prefs.SPEED_3X)) VALUES.put("feed_support_3x_speed", true);
+        // Without this experiment TikTok draws the older comment cells, which have no translate
+        // button at all. With it, each foreign comment gets TikTok's own one; style 2 adds the
+        // "translate all" button left of the panel's close X. Nothing translates until tapped.
+        VALUES.put("comment_auto_translation_enabled", true);
+        VALUES.put("comment_auto_translation_consumer_style", 2);
+        VALUES.put("comment_auto_translation_not_translate_by_default", true);
         if (Prefs.on(Prefs.CAMERA_EXTRAS)) {
             VALUES.put("camera_teleprompter_mode", 1);
             VALUES.put("video_capture_green_screen_standalone", true);

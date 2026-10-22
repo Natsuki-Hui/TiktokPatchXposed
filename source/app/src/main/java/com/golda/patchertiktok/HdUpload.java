@@ -19,34 +19,38 @@ final class HdUpload {
     private HdUpload() { }
 
     static void install(ClassLoader loader) {
-        Set<String> owners = new HashSet<>();
-        List<String> hits = Discovery.methodsUsing(KEY);
-        for (String hit : hits) {
+        // Only the methods that read the switch itself; their class has other () -> boolean settings.
+        java.util.Map<String, Set<String>> owners = new java.util.HashMap<>();
+        for (String hit : Discovery.methodsUsing(KEY)) {
             int split = hit.indexOf('#');
-            if (split > 0) owners.add(hit.substring(0, split));
+            if (split > 0) owners.computeIfAbsent(hit.substring(0, split), key -> new HashSet<>()).add(hit.substring(split + 1));
         }
         int hooks = 0;
         List<String> readers = new java.util.ArrayList<>();
-        for (String name : owners) {
+        for (java.util.Map.Entry<String, Set<String>> entry : owners.entrySet()) {
+            String name = entry.getKey();
             Class<?> owner = Hooks.findClass(name, loader);
             if (owner == null) continue;
-            Method decision = null;
-            Method label = null;
-            Method switched = null;
+            List<Method> decisions = new java.util.ArrayList<>();
+            List<Method> labels = new java.util.ArrayList<>();
+            List<Method> switches = new java.util.ArrayList<>();
             for (Method method : owner.getDeclaredMethods()) {
                 int modifiers = method.getModifiers();
-                if (!Modifier.isStatic(modifiers)) continue;
+                if (!Modifier.isStatic(modifiers) || !entry.getValue().contains(method.getName())) continue;
                 Class<?>[] p = method.getParameterTypes();
                 if (p.length == 1 && p[0] == long.class && method.getReturnType() == boolean.class) {
-                    decision = decision == null ? method : null;
+                    decisions.add(method);
                 } else if (p.length == 1 && p[0] == long.class && method.getReturnType() == String.class) {
-                    label = label == null ? method : null;
+                    labels.add(method);
                 } else if (p.length == 0 && method.getReturnType() == boolean.class) {
-                    switched = switched == null ? method : null;
+                    switches.add(method);
                 }
             }
-            // All three or nothing: a half-changed choice would disagree with itself.
-            if (decision == null || label == null || switched == null) continue;
+            // Exactly one of each, or nothing: a half-changed choice would disagree with itself.
+            if (decisions.size() != 1 || labels.size() != 1 || switches.size() != 1) continue;
+            Method decision = decisions.get(0);
+            Method label = labels.get(0);
+            Method switched = switches.get(0);
             hook(decision, true);
             readers.addAll(Discovery.methodsCalling(name, decision.getName()));
             hook(label, "1");

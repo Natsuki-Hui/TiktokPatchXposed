@@ -49,7 +49,11 @@ final class ChatMenu {
         }
         for (Method method : slot.getDeclaredMethods()) {
             if (method.getParameterTypes().length == 0 && method.getReturnType() == template && !Modifier.isStatic(method.getModifiers())) {
-                if (templateGetter != null) return;
+                if (templateGetter != null) {
+                    RuntimeLog.log("chat menu unavailable: sticker getter ambiguous");
+                    templateGetter = null;
+                    return;
+                }
                 templateGetter = method;
             }
         }

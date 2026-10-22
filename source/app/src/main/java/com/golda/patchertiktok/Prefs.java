@@ -27,6 +27,14 @@ final class Prefs {
     /** Favourite sticker sent by auto streaks instead of the flame; empty for the flame. */
     static final String STREAK_STICKER = "auto_streak_sticker_id";
     static final String STREAK_STICKER_TITLE = "auto_streak_sticker_title";
+    /** Preview picture of the chosen sticker, for the settings preview. */
+    static final String STREAK_STICKER_URL = "auto_streak_sticker_url";
+    /** 0: when the streak starts to fade; otherwise 1 + minute of the day to send at. */
+    static final String STREAK_TIME = "auto_streak_time";
+    /** Comma-separated conversation ids that auto streaks skip. */
+    static final String STREAK_EXCLUDED = "auto_streak_excluded";
+    /** Off: every streak chat; on: all but {@link #STREAK_EXCLUDED}. */
+    static final String STREAK_ONLY_SELECTED = "auto_streak_only_selected";
     static final String SAVE_ALL_PHOTOS = "save_all_photos";
     static final String COMMENT_REPOSTS = "comment_reposts";
     static final String NEW_PROFILE = "new_profile";
@@ -196,6 +204,7 @@ final class Prefs {
         DEFAULTS.put(CAMERA_EXTRAS, false);
         // Automated messages are opt-in only.
         DEFAULTS.put(AUTO_STREAK, false);
+        DEFAULTS.put(STREAK_ONLY_SELECTED, false);
     }
 
     private Prefs() { }
@@ -213,19 +222,20 @@ final class Prefs {
         region = Regions.normalize(loaded.getString(REGION, DEFAULT_REGION));
         oldVideoDays = Math.max(1, loaded.getInt(OLD_VIDEO_DAYS, DEFAULT_OLD_VIDEO_DAYS));
         for (String key : new String[]{FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE, STREAK_STICKER,
-                STREAK_STICKER_TITLE, ANDROID_ID, FONT_SOURCE, FONT_FILE}) TEXTS.put(key, loaded.getString(key, ""));
+                STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED, ANDROID_ID, FONT_SOURCE, FONT_FILE}) TEXTS.put(key, loaded.getString(key, ""));
         for (String key : new String[]{FILTER_MIN_LIKES, FILTER_MIN_VIEWS}) NUMBERS.put(key, loaded.getLong(key, 0));
         NUMBERS.put(ACCENT_COLOR, loaded.getLong(ACCENT_COLOR, DEFAULT_ACCENT));
         NUMBERS.put(OVERLAY_OPACITY, loaded.getLong(OVERLAY_OPACITY, 100));
         NUMBERS.put(REFRESH_RATE, loaded.getLong(REFRESH_RATE, 0));
         NUMBERS.put(HD_BITRATE, loaded.getLong(HD_BITRATE, 0));
+        NUMBERS.put(STREAK_TIME, loaded.getLong(STREAK_TIME, 0));
         rebuildRules();
     }
 
     /** Text strings, numbers and the region, besides the switches in {@link #DEFAULTS}. */
     private static final String[] TEXT_KEYS = {REGION, FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE,
-            STREAK_STICKER, STREAK_STICKER_TITLE};
-    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY, REFRESH_RATE, HD_BITRATE};
+            STREAK_STICKER, STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED};
+    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY, REFRESH_RATE, HD_BITRATE, STREAK_TIME};
 
     /** All settings as JSON, for a backup the user keeps wherever they like. */
     static String export() {

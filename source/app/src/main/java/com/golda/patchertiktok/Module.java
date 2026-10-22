@@ -71,6 +71,7 @@ final class Module {
     /** Runs once the Application context exists, before TikTok's own onCreate. */
     private static void startup(Application app, ClassLoader loader, boolean main) {
         Prefs.load(app);
+        if (main) RuntimeLog.attach(app);
         if (main) Overlay.settingsLoaded();
         if (main) run("accent color", () -> {
             AccentColor.install();

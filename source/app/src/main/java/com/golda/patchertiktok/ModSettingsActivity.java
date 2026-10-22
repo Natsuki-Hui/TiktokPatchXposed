@@ -622,7 +622,9 @@ public final class ModSettingsActivity extends Activity {
         Runnable show = () -> {
             int enabled = enabledCount();
             number.setText(enabled + "/" + total);
-            caption.setText(String.format(locale, I18n.get(S.ENABLED_COUNT), enabled, total));
+            // The number above already says how many; the caption says of what.
+            caption.setText(I18n.get(S.ENABLED_LABEL));
+            caption.setContentDescription(String.format(locale, I18n.get(S.ENABLED_COUNT), enabled, total));
             fill.setScaleX(enabled / (float) total);
         };
         show.run();
@@ -775,7 +777,11 @@ public final class ModSettingsActivity extends Activity {
             {"interface", "HIDE_INBOX_STORIES"}, {"overlay", "OVERLAY_OPACITY"}, {"accent color", "ACCENT"},
             {"author region", "AUTHOR_REGION"}, {"comment translation", "AUTO_TRANSLATE"}, {"downloads", "NO_WATERMARK"}, {"clean links", "CLEAN_LINKS"},
             {"invisible mode", "SECTION_GHOST"}, {"region", "REGION"}, {"recommendation", "REGION_LANGUAGE"},
-            {"A/B overrides", "EXTRA_FEATURES"}, {"auto streaks", "AUTO_STREAK"}};
+            {"A/B overrides", "EXTRA_FEATURES"}, {"auto streaks", "AUTO_STREAK"}, {"streak sticker", "STREAK_STICKER"},
+            {"friend card", "ACQUAINTANCES"}, {"unmute", "UNMUTE"}, {"font", "FONT"}, {"privacy", "SECTION_PRIVACY"},
+            {"refresh rate", "REFRESH_RATE"}, {"story download", "STORY_DOWNLOAD"}, {"avatar download", "AVATAR_DOWNLOAD"},
+            {"message time", "MESSAGE_TIME"}, {"chat menu", "CHAT_STICKER"}, {"hd upload", "HD_UPLOAD"},
+            {"read receipts", "GHOST_READ"}, {"read all", "READ_ALL"}};
 
     private View statusPage() {
         Page page = new Page(I18n.get(S.STATUS_TITLE), true);
@@ -947,6 +953,12 @@ public final class ModSettingsActivity extends Activity {
             buildRegion(page, page.card());
             return page.root;
         }
+        if (category == Category.STREAKS) {
+            Runnable sync = streaks(page);
+            sync.run();
+            page.root.setTag(sync);
+            return page.root;
+        }
         // Each group gets its own heading and card; extra rows sit right under the switch they belong to.
         List<Runnable> syncs = new ArrayList<>();
         LinearLayout card = null;
@@ -1014,13 +1026,6 @@ public final class ModSettingsActivity extends Activity {
             syncs.add(() -> {
                 value.setText(ageLabel(Prefs.oldVideoDays()));
                 row.setVisibility(Prefs.on(Prefs.OLD_VIDEOS) ? View.VISIBLE : View.GONE);
-            });
-        } else if (Prefs.AUTO_STREAK.equals(key)) {
-            TextView value = navigation(card, I18n.get(S.STREAK_SEND), stickerLabel(), view -> push(stickerPage(), true));
-            View row = (View) value.getParent();
-            syncs.add(() -> {
-                value.setText(stickerLabel());
-                row.setVisibility(Prefs.on(Prefs.AUTO_STREAK) ? View.VISIBLE : View.GONE);
             });
         }
     }
@@ -1596,49 +1601,436 @@ public final class ModSettingsActivity extends Activity {
         return page.root;
     }
 
+    /** TikTok's own flame picture, the default of auto streaks. */
+    private static final String FIRE_URL = "https://p16-tiktokcdn-com.akamaized.net/obj/im-resource-tiktok/fire.webp";
+
+    /**
+     * The streaks page: the switch, a preview of the chat as the friend will see it, then when,
+     * what and to whom. Everything under the switch dims while it is off. Returns its sync.
+     */
+    private Runnable streaks(Page page) {
+        toggle(page.card(), S.AUTO_STREAK, S.AUTO_STREAK_DESC, Prefs.AUTO_STREAK);
+
+        LinearLayout preview = page.card();
+        ((LinearLayout.LayoutParams) preview.getLayoutParams()).topMargin = dp(12);
+        preview.setShowDividers(LinearLayout.SHOW_DIVIDER_NONE);
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPaddingRelative(dp(14), dp(12), dp(14), dp(12));
+        ImageView back = new ImageView(this);
+        back.setImageDrawable(new Glyph(Glyph.Kind.BACK, palette.textSecondary, dp(20)));
+        head.addView(back, new LinearLayout.LayoutParams(dp(20), dp(20)));
+        View avatar = new View(this);
+        GradientDrawable face = new GradientDrawable();
+        face.setShape(GradientDrawable.OVAL);
+        face.setColor(palette.trackOff);
+        avatar.setBackground(face);
+        LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(dp(30), dp(30));
+        avatarParams.setMarginStart(dp(10));
+        head.addView(avatar, avatarParams);
+        TextView name = new TextView(this);
+        name.setText(I18n.get(S.STREAK_PREVIEW_NAME));
+        name.setTextColor(palette.textPrimary);
+        name.setTextSize(15);
+        name.setTypeface(Fonts.semibold(this));
+        LinearLayout.LayoutParams nameParams = new LinearLayout.LayoutParams(-2, -2);
+        nameParams.setMarginStart(dp(10));
+        head.addView(name, nameParams);
+        TextView days = new TextView(this);
+        days.setText("125");
+        days.setTextColor(palette.textSecondary);
+        days.setTextSize(13);
+        days.setTypeface(Fonts.semibold(this));
+        days.setCompoundDrawablePadding(dp(3));
+        Glyph flame = new Glyph(Glyph.Kind.FLAME, palette.textSecondary, dp(14));
+        flame.setBounds(0, 0, dp(14), dp(14));
+        days.setCompoundDrawablesRelative(flame, null, null, null);
+        LinearLayout.LayoutParams daysParams = new LinearLayout.LayoutParams(-2, -2);
+        daysParams.setMarginStart(dp(8));
+        head.addView(days, daysParams);
+        preview.addView(head);
+        View rule = new View(this);
+        rule.setBackgroundColor(palette.dark ? 0x14FFFFFF : 0x14000000);
+        preview.addView(rule, new LinearLayout.LayoutParams(-1, Math.max(1, dp(0.5f))));
+        TextView stamp = new TextView(this);
+        stamp.setTextColor(palette.textTertiary);
+        stamp.setTextSize(12);
+        stamp.setTypeface(Fonts.regular(this));
+        stamp.setGravity(Gravity.CENTER);
+        stamp.setPadding(dp(16), dp(12), dp(16), dp(8));
+        preview.addView(stamp, new LinearLayout.LayoutParams(-1, -2));
+        ImageView sticker = new ImageView(this);
+        sticker.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams stickerParams = new LinearLayout.LayoutParams(dp(92), dp(92));
+        stickerParams.gravity = Gravity.END;
+        stickerParams.setMarginEnd(dp(16));
+        stickerParams.bottomMargin = dp(16);
+        preview.addView(sticker, stickerParams);
+
+        page.section(I18n.get(S.STREAK_SETTINGS));
+        LinearLayout settings = page.card();
+        LinearLayout timeRow = row(settings);
+        texts(timeRow, I18n.get(S.STREAK_TIME), null);
+        TextView chip = new TextView(this);
+        chip.setTextColor(palette.textPrimary);
+        chip.setTextSize(15);
+        chip.setTypeface(Fonts.semibold(this));
+        chip.setGravity(Gravity.CENTER);
+        chip.setPadding(dp(10), dp(4), dp(10), dp(4));
+        chip.setBackground(rounded(palette.pressed, dp(8)));
+        timeRow.addView(chip, new LinearLayout.LayoutParams(-2, -2));
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(16), dp(4), dp(16), dp(14));
+        panel.setVisibility(View.GONE);
+        settings.addView(panel, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout wheels = new LinearLayout(this);
+        int stored = StreakTiming.minuteOfDay(Prefs.number(Prefs.STREAK_TIME));
+        int initial = stored < 0 ? 21 * 60 : stored;
+        android.widget.NumberPicker hours = wheel(23, initial / 60);
+        android.widget.NumberPicker minutes = wheel(59, initial % 60);
+        android.widget.NumberPicker.OnValueChangeListener changed = (picker, old, value) -> {
+            picker.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            Prefs.setNumber(Prefs.STREAK_TIME, 1 + hours.getValue() * 60L + minutes.getValue());
+        };
+        hours.setOnValueChangedListener(changed);
+        minutes.setOnValueChangedListener(changed);
+        wheels.addView(hours, new LinearLayout.LayoutParams(0, -2, 1));
+        LinearLayout.LayoutParams minuteParams = new LinearLayout.LayoutParams(0, -2, 1);
+        minuteParams.setMarginStart(dp(12));
+        wheels.addView(minutes, minuteParams);
+        View modes = segmented(new String[]{I18n.get(S.STREAK_WHEN_FADING), I18n.get(S.STREAK_WHEN_TIME)},
+                () -> Prefs.number(Prefs.STREAK_TIME) > 0 ? 1 : 0, index -> Prefs.setNumber(Prefs.STREAK_TIME,
+                        index == 0 ? 0 : 1 + hours.getValue() * 60L + minutes.getValue()));
+        panel.addView(modes, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams wheelsParams = new LinearLayout.LayoutParams(-1, -2);
+        wheelsParams.topMargin = dp(10);
+        panel.addView(wheels, wheelsParams);
+        timeRow.setOnClickListener(view -> {
+            if (motion()) android.transition.TransitionManager.beginDelayedTransition(page.content);
+            panel.setVisibility(panel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
+        });
+
+        TextView what = navigation(settings, I18n.get(S.STREAK_SEND), stickerLabel(), view -> openSheet(stickerSheet()));
+        TextView whom = navigation(settings, I18n.get(S.STREAK_RECIPIENTS), recipientsLabel(), view -> openSheet(recipientsSheet()));
+        page.footer(I18n.get(S.STREAK_TIME_NOTE));
+
+        // "Selected: N" needs the streak chats; read them once, quietly, while the page opens.
+        new Thread(() -> {
+            List<AutoStreakManager.Partner> partners = AutoStreakManager.partners();
+            if (partners != null) runOnUiThread(() -> {
+                lastPartners = partners;
+                whom.setText(recipientsLabel());
+            });
+        }, "tpx-streak-count").start();
+        String[] shownSticker = {null};
+        return () -> {
+            int minute = StreakTiming.minuteOfDay(Prefs.number(Prefs.STREAK_TIME));
+            String time = minute < 0 ? null : String.format(Locale.US, "%02d:%02d", minute / 60, minute % 60);
+            chip.setText(time == null ? I18n.get(S.STREAK_AUTO) : time);
+            stamp.setText(time == null ? I18n.get(S.STREAK_PREVIEW_FADING) : String.format(I18n.get(S.STREAK_TODAY), time));
+            wheels.setVisibility(minute < 0 ? View.GONE : View.VISIBLE);
+            if (modes.getTag() instanceof Runnable) ((Runnable) modes.getTag()).run();
+            what.setText(stickerLabel());
+            whom.setText(recipientsLabel());
+            String id = StreakSticker.chosen();
+            String key = id == null ? "fire" : id;
+            if (!key.equals(shownSticker[0])) {
+                shownSticker[0] = key;
+                sticker.setImageDrawable(null);
+                String url = Prefs.text(Prefs.STREAK_STICKER_URL);
+                loadPicture(sticker, key, id == null || url.isEmpty() ? java.util.Collections.singletonList(FIRE_URL)
+                        : java.util.Collections.singletonList(url));
+            }
+            boolean on = Prefs.on(Prefs.AUTO_STREAK);
+            for (View part : new View[]{preview, settings}) {
+                part.animate().alpha(on ? 1f : 0.35f).setDuration(motion() ? 180 : 0).start();
+                enable(part, on);
+            }
+        };
+    }
+
+    private void enable(View view, boolean on) {
+        view.setEnabled(on);
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int index = 0; index < group.getChildCount(); index++) enable(group.getChildAt(index), on);
+        }
+    }
+
+    /** A wheel of 0..max shown as two digits, in the page's colors. */
+    private android.widget.NumberPicker wheel(int max, int value) {
+        android.widget.NumberPicker picker = new android.widget.NumberPicker(this);
+        picker.setMinValue(0);
+        picker.setMaxValue(max);
+        picker.setValue(value);
+        picker.setFormatter(number -> String.format(Locale.US, "%02d", number));
+        picker.setDescendantFocusability(android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        picker.setBackground(rounded(palette.pressed, dp(12)));
+        if (Build.VERSION.SDK_INT >= 29) {
+            picker.setTextColor(palette.textPrimary);
+            picker.setSelectionDividerHeight(0);
+        }
+        return picker;
+    }
+
+    /**
+     * Two or more options in one pill; the chosen one sits on a lighter pill. The view's tag is a
+     * Runnable that redraws it from {@code current}.
+     */
+    private View segmented(String[] labels, java.util.function.IntSupplier current, java.util.function.IntConsumer pick) {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setPadding(dp(3), dp(3), dp(3), dp(3));
+        bar.setBackground(rounded(palette.pressed, dp(10)));
+        List<TextView> items = new ArrayList<>();
+        Runnable render = () -> {
+            int chosen = current.getAsInt();
+            for (int index = 0; index < items.size(); index++) {
+                TextView item = items.get(index);
+                boolean on = index == chosen;
+                item.setBackground(on ? rounded(palette.trackOff, dp(8)) : null);
+                item.setTextColor(on ? palette.textPrimary : palette.textSecondary);
+                item.setTypeface(on ? Fonts.semibold(this) : Fonts.regular(this));
+                item.setSelected(on);
+            }
+        };
+        for (int index = 0; index < labels.length; index++) {
+            TextView item = new TextView(this);
+            item.setText(labels[index]);
+            item.setTextSize(14);
+            item.setGravity(Gravity.CENTER);
+            item.setSingleLine(true);
+            item.setEllipsize(TextUtils.TruncateAt.END);
+            item.setPadding(dp(8), dp(8), dp(8), dp(8));
+            int chosen = index;
+            item.setOnClickListener(view -> {
+                if (!view.isEnabled() || current.getAsInt() == chosen) return;
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                pick.accept(chosen);
+                render.run();
+            });
+            bar.addView(item, new LinearLayout.LayoutParams(0, -2, 1));
+            items.add(item);
+        }
+        render.run();
+        bar.setTag(render);
+        return bar;
+    }
+
     private String stickerLabel() {
         if (StreakSticker.chosen() == null) return I18n.get(S.STREAK_FLAME);
         String title = Prefs.text(Prefs.STREAK_STICKER_TITLE);
         return title == null || title.isEmpty() ? I18n.get(S.STREAK_STICKER) : title;
     }
 
-    /** What auto streaks send: TikTok's flame, or one of the user's favourite stickers. */
-    private View stickerPage() {
-        Page page = new Page(I18n.get(S.STREAK_SEND), true);
-        choice(page.card(), I18n.get(S.STREAK_FLAME), StreakSticker.chosen() == null, () -> {
-            Prefs.setText(Prefs.STREAK_STICKER, "");
-            Prefs.setText(Prefs.STREAK_STICKER_TITLE, "");
-        });
-        page.section(I18n.get(S.STREAK_FAVOURITES));
-        LinearLayout card = page.card();
+    /** Title and a quiet line under it, at the top of a bottom sheet. */
+    private void sheetHeader(LinearLayout content, String title, String description) {
+        TextView heading = new TextView(this);
+        heading.setText(title);
+        heading.setTextColor(palette.textPrimary);
+        heading.setTextSize(18);
+        heading.setTypeface(Fonts.bold(this));
+        heading.setPadding(dp(18), 0, dp(18), 0);
+        content.addView(heading);
+        TextView line = new TextView(this);
+        line.setText(description);
+        line.setTextColor(palette.textSecondary);
+        line.setTextSize(13.5f);
+        line.setTypeface(Fonts.regular(this));
+        line.setPadding(dp(18), dp(4), dp(18), dp(12));
+        content.addView(line);
+    }
+
+    /** Puts {@code body} in a scroll view no taller than about half the screen. */
+    private View capped(View body) {
+        ScrollView scroll = new ScrollView(this) {
+            @Override protected void onMeasure(int width, int height) {
+                int cap = (int) (getResources().getDisplayMetrics().heightPixels * 0.5f);
+                super.onMeasure(width, MeasureSpec.makeMeasureSpec(cap, MeasureSpec.AT_MOST));
+            }
+        };
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        scroll.addView(body, new ScrollView.LayoutParams(-1, -2));
+        return scroll;
+    }
+
+    private String recipientsLabel() {
+        if (!Prefs.on(Prefs.STREAK_ONLY_SELECTED)) return I18n.get(S.STREAK_EVERYONE);
+        List<AutoStreakManager.Partner> known = lastPartners;
+        if (known == null) return I18n.get(S.STREAK_MODE_SELECTED);
+        java.util.Set<String> excluded = AutoStreakManager.excluded();
+        int count = 0;
+        for (AutoStreakManager.Partner partner : known) if (!excluded.contains(partner.conversation)) count++;
+        return String.format(locale, I18n.get(S.STREAK_SELECTED), count);
+    }
+
+    /** Streak chats as last read for the recipients sheet; the row's "Selected: N" counts them. */
+    private volatile List<AutoStreakManager.Partner> lastPartners;
+
+    /** Everyone, or only the checked chats; changes are kept on "Save". */
+    private View recipientsSheet() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        sheetHeader(content, I18n.get(S.STREAK_RECIPIENTS_TITLE), I18n.get(S.STREAK_RECIPIENTS_DESC));
+        boolean[] some = {Prefs.on(Prefs.STREAK_ONLY_SELECTED)};
+        java.util.Set<String> excluded = new java.util.HashSet<>();
+        for (String id : Prefs.text(Prefs.STREAK_EXCLUDED).split(",")) if (!id.trim().isEmpty()) excluded.add(id.trim());
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        Runnable dim = () -> {
+            list.setAlpha(some[0] ? 1f : 0.45f);
+            enable(list, some[0]);
+        };
+        View modes = segmented(new String[]{I18n.get(S.STREAK_MODE_ALL), I18n.get(S.STREAK_MODE_SELECTED)},
+                () -> some[0] ? 1 : 0, index -> {
+                    some[0] = index == 1;
+                    dim.run();
+                });
+        LinearLayout.LayoutParams modeParams = new LinearLayout.LayoutParams(-1, -2);
+        modeParams.setMargins(dp(16), 0, dp(16), dp(8));
+        content.addView(modes, modeParams);
+        content.addView(capped(list));
         TextView status = new TextView(this);
         status.setText(I18n.get(S.STREAK_LOADING));
         status.setTextColor(palette.textSecondary);
-        status.setTextSize(15);
+        status.setTextSize(14);
         status.setGravity(Gravity.CENTER);
-        status.setPadding(dp(16), dp(24), dp(16), dp(24));
-        card.addView(status);
-        page.footer(I18n.get(S.STREAK_STICKER_FOOTER));
+        status.setPadding(dp(24), dp(16), dp(24), dp(16));
+        list.addView(status);
+        dim.run();
         new Thread(() -> {
-            java.util.List<StreakSticker.Choice> stickers = StreakSticker.favourites();
+            List<AutoStreakManager.Partner> partners = AutoStreakManager.partners();
+            java.util.Map<String, StreakPeople.Person> people = partners == null ? null : StreakPeople.lookup(partners);
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (partners == null || partners.isEmpty()) {
+                    status.setText(I18n.get(S.STREAK_RECIPIENTS_EMPTY));
+                    return;
+                }
+                lastPartners = partners;
+                list.removeAllViews();
+                for (AutoStreakManager.Partner partner : partners) {
+                    StreakPeople.Person person = people == null ? null : people.get(partner.peer);
+                    recipientRow(list, partner, person, excluded);
+                }
+                dim.run();
+            });
+        }, "tpx-streak-partners").start();
+        TextView save = new TextView(this);
+        save.setText(I18n.get(S.STREAK_SAVE));
+        save.setTextColor(palette.background);
+        save.setTextSize(16);
+        save.setTypeface(Fonts.semibold(this));
+        save.setGravity(Gravity.CENTER);
+        save.setPadding(0, dp(13), 0, dp(13));
+        save.setBackground(rounded(palette.textPrimary, dp(14)));
+        save.setOnClickListener(view -> {
+            Prefs.setText(Prefs.STREAK_EXCLUDED, String.join(",", excluded));
+            Prefs.set(Prefs.STREAK_ONLY_SELECTED, some[0]);
+            closeSheet();
+        });
+        LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(-1, -2);
+        saveParams.setMargins(dp(16), dp(12), dp(16), 0);
+        content.addView(save, saveParams);
+        return content;
+    }
+
+    /** Avatar, name and streak length, with a check box; unchecking leaves the chat out. */
+    private void recipientRow(LinearLayout list, AutoStreakManager.Partner partner, StreakPeople.Person person,
+            java.util.Set<String> excluded) {
+        LinearLayout row = row(list);
+        row.setBackground(null);
+        ImageView avatar = new ImageView(this);
+        avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        GradientDrawable face = new GradientDrawable();
+        face.setShape(GradientDrawable.OVAL);
+        face.setColor(palette.trackOff);
+        avatar.setBackground(face);
+        avatar.setClipToOutline(true);
+        LinearLayout.LayoutParams avatarParams = new LinearLayout.LayoutParams(dp(38), dp(38));
+        avatarParams.setMarginEnd(dp(12));
+        row.addView(avatar, avatarParams);
+        if (person != null && person.avatar != null) {
+            loadPicture(avatar, "avatar_" + partner.peer, java.util.Collections.singletonList(person.avatar));
+        }
+        String name = person != null && person.name != null && !person.name.isEmpty() ? person.name
+                : person != null && person.handle != null ? "@" + person.handle : "id " + partner.peer;
+        LinearLayout texts = texts(row, name, String.valueOf(partner.days));
+        TextView days = (TextView) texts.getChildAt(texts.getChildCount() - 1);
+        Glyph flame = new Glyph(Glyph.Kind.FLAME, palette.textSecondary, dp(13));
+        flame.setBounds(0, 0, dp(13), dp(13));
+        days.setCompoundDrawablesRelative(flame, null, null, null);
+        days.setCompoundDrawablePadding(dp(3));
+        ImageView box = new ImageView(this);
+        Runnable draw = () -> box.setImageDrawable(checkBox(!excluded.contains(partner.conversation)));
+        draw.run();
+        row.addView(box, new LinearLayout.LayoutParams(dp(22), dp(22)));
+        row.setOnClickListener(view -> {
+            if (!view.isEnabled()) return;
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            if (!excluded.remove(partner.conversation)) excluded.add(partner.conversation);
+            draw.run();
+        });
+    }
+
+    private android.graphics.drawable.Drawable checkBox(boolean on) {
+        GradientDrawable square = new GradientDrawable();
+        square.setCornerRadius(dp(6));
+        square.setSize(dp(22), dp(22));
+        if (!on) {
+            square.setStroke(dp(2), palette.textTertiary);
+            return square;
+        }
+        square.setColor(palette.accent);
+        Glyph check = new Glyph(Glyph.Kind.CHECK, palette.background, dp(16));
+        android.graphics.drawable.LayerDrawable layers = new android.graphics.drawable.LayerDrawable(
+                new android.graphics.drawable.Drawable[]{square, check});
+        layers.setLayerInset(1, dp(3), dp(3), dp(3), dp(3));
+        return layers;
+    }
+
+    /** What auto streaks send: TikTok's flame first, then the user's favourite stickers. */
+    private View stickerSheet() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        sheetHeader(content, I18n.get(S.STREAK_SEND), I18n.get(S.STREAK_STICKER_DESC));
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        content.addView(capped(body));
+        List<StreakSticker.Choice> shown = new ArrayList<>();
+        shown.add(new StreakSticker.Choice("", I18n.get(S.STREAK_FLAME), java.util.Collections.singletonList(FIRE_URL)));
+        stickerGrid(body, shown);
+        TextView status = new TextView(this);
+        status.setText(I18n.get(S.STREAK_LOADING));
+        status.setTextColor(palette.textSecondary);
+        status.setTextSize(14);
+        status.setGravity(Gravity.CENTER);
+        status.setPadding(dp(16), dp(12), dp(16), dp(12));
+        body.addView(status);
+        new Thread(() -> {
+            List<StreakSticker.Choice> stickers = StreakSticker.favourites();
             runOnUiThread(() -> {
                 if (isFinishing()) return;
                 if (stickers == null || stickers.isEmpty()) {
                     status.setText(I18n.get(stickers == null ? S.STREAK_OUTSIDE : S.STREAK_NONE));
                     return;
                 }
-                card.removeView(status);
-                stickerGrid(card, stickers);
+                body.removeAllViews();
+                shown.addAll(stickers);
+                stickerGrid(body, shown);
             });
         }, "tpx-favourite-stickers").start();
-        return page.root;
+        return content;
     }
 
-    private void stickerGrid(LinearLayout card, java.util.List<StreakSticker.Choice> stickers) {
-        String chosen = StreakSticker.chosen();
+    /** Four stickers a row; the chosen one is framed and marked, a tap picks and closes. */
+    private void stickerGrid(LinearLayout card, List<StreakSticker.Choice> stickers) {
+        String chosen = StreakSticker.chosen() == null ? "" : StreakSticker.chosen();
         LinearLayout grid = new LinearLayout(this);
         grid.setOrientation(LinearLayout.VERTICAL);
-        grid.setPadding(dp(8), dp(8), dp(8), dp(8));
+        grid.setPadding(dp(12), 0, dp(12), dp(4));
         card.addView(grid, new LinearLayout.LayoutParams(-1, -2));
         LinearLayout line = null;
         for (int index = 0; index < stickers.size(); index++) {
@@ -1647,20 +2039,35 @@ public final class ModSettingsActivity extends Activity {
                 grid.addView(line, new LinearLayout.LayoutParams(-1, dp(84)));
             }
             StreakSticker.Choice sticker = stickers.get(index);
+            boolean selected = sticker.id.equals(chosen);
             FrameLayout cell = new FrameLayout(this);
             GradientDrawable frame = new GradientDrawable();
             frame.setCornerRadius(dp(14));
-            frame.setColor(sticker.id.equals(chosen) ? (palette.accent & 0x33FFFFFF) : 0);
-            if (sticker.id.equals(chosen)) frame.setStroke(dp(2), palette.accent);
+            frame.setColor(palette.pressed);
+            if (selected) frame.setStroke(dp(2), palette.accent);
             cell.setBackground(frame);
             ImageView image = new ImageView(this);
             image.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            cell.addView(image, new FrameLayout.LayoutParams(dp(64), dp(64), Gravity.CENTER));
-            loadPicture(image, sticker.id, sticker.previews);
-            cell.setOnClickListener(view -> view.animate().scaleX(0.88f).scaleY(0.88f).setDuration(90).withEndAction(() -> {
+            cell.addView(image, new FrameLayout.LayoutParams(dp(60), dp(60), Gravity.CENTER));
+            loadPicture(image, sticker.id.isEmpty() ? "fire" : sticker.id, sticker.previews);
+            if (selected) {
+                ImageView mark = new ImageView(this);
+                mark.setImageDrawable(new Glyph(Glyph.Kind.CHECK, palette.background, dp(12)));
+                mark.setScaleType(ImageView.ScaleType.CENTER);
+                GradientDrawable dot = new GradientDrawable();
+                dot.setShape(GradientDrawable.OVAL);
+                dot.setColor(palette.accent);
+                mark.setBackground(dot);
+                FrameLayout.LayoutParams markParams = new FrameLayout.LayoutParams(dp(18), dp(18), Gravity.TOP | Gravity.END);
+                markParams.setMargins(0, dp(5), dp(5), 0);
+                cell.addView(mark, markParams);
+            }
+            cell.setContentDescription(sticker.title);
+            cell.setOnClickListener(view -> view.animate().scaleX(0.9f).scaleY(0.9f).setDuration(90).withEndAction(() -> {
                 Prefs.setText(Prefs.STREAK_STICKER, sticker.id);
-                Prefs.setText(Prefs.STREAK_STICKER_TITLE, sticker.title);
-                pop();
+                Prefs.setText(Prefs.STREAK_STICKER_TITLE, sticker.id.isEmpty() ? "" : sticker.title);
+                Prefs.setText(Prefs.STREAK_STICKER_URL, sticker.id.isEmpty() || sticker.previews.isEmpty() ? "" : sticker.previews.get(0));
+                closeSheet();
             }).start());
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(76), 1);
             params.setMargins(dp(4), dp(4), dp(4), dp(4));

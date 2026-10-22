@@ -7,7 +7,7 @@ turns on features TikTok rolls out only to some people, and adds many small thin
 everywhere, your own color, font and AMOLED theme, hiding parts of the screen, country flags,
 invisible mode and auto streaks. All settings live right inside TikTok.
 
-Current version: **4.3.0**. Tested on **TikTok 47.4.3** and **47.1.4** (Google Play and universal APK),
+Current version: **4.3.1**. Tested on **TikTok 47.4.3** and **47.1.4** (Google Play and universal APK),
 **Android 16**. Most features find what they need in TikTok by themselves, so
 they survive TikTok updates.
 
@@ -58,7 +58,8 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **3× speed** in TikTok's own speed menu.
 - **Screen refresh rate**: hold 60, 90 or 120 Hz; TikTok no longer lowers it to the video's frame rate.
 - **Own speeds** and **remember speed**.
-- **Resume where you left off**, **keep "Clear display"**, **seek bar everywhere**.
+- **Resume where you left off**, **keep "Clear display"**.
+- **Seek on every video**: on short ones the bar stays hidden, drag along the bottom edge of the video.
 - 🧪 **Sound in muted videos**: brings back sound TikTok turned off over copyright, if the video still has it.
 
 ### Interface
@@ -72,7 +73,9 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **"Read all"**: hold the Inbox tab.
 
 ### Comments
-- **Auto-translate comments** with TikTok's own translator, with languages to skip.
+- **TikTok's translate buttons**: an icon on every foreign comment and "Translate all" in the
+  comments header, even if TikTok never showed them to you.
+- **Auto-translate comments**: turns TikTok's translation on for all comments right away.
 - **Copy text only**, **author's country** (a flag next to the video date and in profiles).
 - **Comment reposts**; 🧪 **repost your own videos**.
 - 🧪 **Up to 9 photos in a comment**.
@@ -96,10 +99,11 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 The module doesn't change the account's region or your IP address, so the result isn't guaranteed.
 
 ### Streaks
-- **Auto streaks**: keep existing streaks in one-to-one chats going, only when a streak is about to
-  burn out and only while TikTok is open. A flame or a sticker from your favorites. If you already
-  wrote to that chat today (also from another phone), nothing is sent again. If TikTok rejects a
-  flame, you get a notification.
+- **Auto streaks**: keep existing streaks in one-to-one chats going while TikTok is open. Sent
+  when a streak starts to fade, or at your own time (if it would end sooner, it goes an hour before
+  the end). A flame or a sticker from your favorites, to everyone or only chosen chats; the settings
+  show how it will look in the chat. If you already wrote to that chat today (also from another
+  phone), nothing is sent again. If TikTok rejects a flame, you get a notification.
 
 ### Experiments
 - **Hidden TikTok features**: hold-to-speed-up, audio and photo comments, comments to favorites and more.

@@ -57,8 +57,9 @@ final class ReadReceipts {
             Class<?> owner = split > 0 ? Hooks.findClass(hit.substring(0, split), loader) : null;
             if (owner == null) continue;
             String name = hit.substring(split + 1);
-            success = result(loader, owner, name);
-            if (success == null) continue;
+            Constructor<?> answer = result(loader, owner, name);
+            if (answer == null) continue;
+            success = answer;
             for (Method method : owner.getDeclaredMethods()) {
                 Class<?>[] p = method.getParameterTypes();
                 if (method.getName().equals(name) && p.length == 2 && p[0] == request) {
@@ -108,10 +109,10 @@ final class ReadReceipts {
             if (!Prefs.on(Prefs.GHOST_READ) || SENDING.get() != null) return;
             Object chat = builtFrom(param.args[0]);
             String id = chat == null ? null : string(Reflect.call(chat, "getConversationId"));
-            if (id == null) return;
             try {
                 param.setResult(success.newInstance(true, "", -1014, null));
-                UNSENT.put(id, chat);
+                // A request whose chat is unknown is still held back; it just cannot be sent later.
+                if (id != null) UNSENT.put(id, chat);
             } catch (Throwable error) {
                 // TikTok sends it as usual.
             }

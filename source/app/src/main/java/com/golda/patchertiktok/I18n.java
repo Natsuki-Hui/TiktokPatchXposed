@@ -57,7 +57,9 @@ final class I18n {
         HD_BITRATE, HD_BITRATE_DESC,
         READ_ALL_DONE, READ_ALL_FAILED, READ_ALL_ACTION, READ_ALL_NONE,
         READ_ALL_CONFIRM, READ_ALL_CONFIRM_TEXT,
-        HD_MBPS
+        HD_MBPS,
+        STREAK_SETTINGS, STREAK_TIME, STREAK_AUTO, STREAK_WHEN_FADING, STREAK_WHEN_TIME, STREAK_TODAY, STREAK_PREVIEW_FADING, STREAK_PREVIEW_NAME, STREAK_TIME_NOTE, STREAK_STICKER_DESC, STREAK_RECIPIENTS, STREAK_EVERYONE, STREAK_SELECTED, STREAK_RECIPIENTS_TITLE, STREAK_RECIPIENTS_DESC, STREAK_MODE_ALL, STREAK_MODE_SELECTED, STREAK_RECIPIENTS_EMPTY, STREAK_SAVE,
+        ENABLED_LABEL
     }
 
     private static final Map<String, String[]> TABLES = new HashMap<>();
@@ -68,7 +70,7 @@ final class I18n {
                 "Block ads", "Ads in the feed, at startup and in other video lists",
                 "Hide LIVE", "Live streams in the feed and the LIVE button",
                 "Hide “People you may know”", "Videos suggested from your contacts",
-                "Seek bar on every video", "Including short videos",
+                "Seek bar on every video", "Including short videos: there the bar stays hidden, drag along the bottom edge of the video",
                 "Comments",
                 "Comment reposts", "Repost videos with your own comment",
                 "New profile layout", "Left-aligned profile with banners",
@@ -96,13 +98,15 @@ final class I18n {
                 "Upload bitrate", "TikTok encodes 1080p at about 4 Mbit/s. A higher bitrate gives its server a cleaner video to re-encode for viewers: less blur in motion and fine detail. Past 30 Mbit/s nothing more is kept. Larger files, slower upload",
                 "All chats marked read", "Couldn’t mark the chats read", "Read all", "No unread chats",
                 "Read all chats?", "Chats marked read: %d. The people you chat with will see it.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Auto streak settings", "Send time", "Auto", "When it fades", "At my time", "Today %s", "As soon as the streak starts to fade", "Friend", "Sent while TikTok is open. If a streak would end before the chosen time, it is renewed an hour before the end.", "The flame or any sticker from your favourites", "Recipients", "Everyone", "Selected: %d", "Who to keep streaks with", "Uncheck the people who should not get streaks automatically.", "Everyone", "Only selected", "No streak chats yet. Open your Inbox in TikTok, then come back here.", "Save",
+                "features on"});
         TABLES.put("ru", new String[]{
                 "TiktokPatchXposed", "Лента",
                 "Блокировать рекламу", "В ленте, при запуске и в других списках видео",
                 "Скрыть LIVE", "Трансляции в ленте и кнопку LIVE",
                 "Скрыть «Вы можете знать»", "Видео, предложенные по вашим контактам",
-                "Перемотка на всех видео", "Включая короткие ролики",
+                "Перемотка на всех видео", "Включая короткие ролики: там полоса не видна, тяните пальцем по нижнему краю видео",
                 "Комментарии",
                 "Репосты с комментарием", "Делитесь видео со своим комментарием",
                 "Новый вид профиля", "Профиль с выравниванием влево и баннерами",
@@ -121,7 +125,7 @@ final class I18n {
                 "Звук в заглушённых видео", "Включает звук, который TikTok выключил из-за авторских прав, если он ещё есть в видео", "Репост своих видео", "Кнопка «Репост» на ваших видео; остальные правила TikTok остаются",
                 "Шрифт", "Как в TikTok", "Системный", "Из файла", "Выбрать файл .ttf или .otf", "сменить", "Съешь ещё этих мягких французских булок", "Этот файл не подходит как шрифт",
                 "Частота экрана", "%d Гц", "TikTok снижает частоту экрана до частоты видео (часто 30 кадров), и прокрутка становится менее плавной. Выбранная частота держится во всём TikTok и применяется сразу. Высокая частота расходует больше батареи.", "Сохранить в файл", "Открыть файл", "Настройки сохранены", "Скопировать текстом",
-                "Скачивание stories", "Удерживайте палец на story или подборке в профиле, чтобы сохранить видео, фото или звук", "Скачивание аватарок", "Откройте аватарку и удерживайте палец на ней, чтобы сохранить её в полном размере",
+                "Скачивание историй", "Удерживайте палец на истории или подборке в профиле, чтобы сохранить видео, фото или звук", "Скачивание аватарок", "Откройте аватарку и удерживайте палец на ней, чтобы сохранить её в полном размере",
                 "Скрыть «печатает…»", "Собеседник не видит, что вы набираете сообщение", "Скрыть «в сети»", "TikTok не сообщает, что вы в приложении, и у друзей не горит зелёная точка. Вы их статус по-прежнему видите. Точка может погаснуть не сразу, а через несколько минут",
                 "Время у сообщений", "Под каждым сообщением в чате — время отправки",
                 "Стикеры из чатов", "Удерживайте стикер в чате — в меню появится «Скачать стикер»",
@@ -130,13 +134,15 @@ final class I18n {
                 "Битрейт загрузки", "TikTok кодирует 1080p примерно в 4 Мбит/с. Высокий битрейт даёт серверу более чистое видео, которое он пережимает для зрителей: меньше «каши» в движении и на мелких деталях. Выше 30 Мбит/с разница уже не сохраняется. Файл больше, загрузка дольше",
                 "Все чаты отмечены прочитанными", "Не удалось отметить чаты прочитанными", "Прочитать все", "Непрочитанных чатов нет",
                 "Прочитать все чаты?", "Будут отмечены прочитанными чатов: %d. Собеседники это увидят.",
-                "%d Мбит/с"});
+                "%d Мбит/с",
+                "Настройки автоогоньков", "Время отправки", "Авто", "Когда гаснет", "В своё время", "Сегодня %s", "Как только огонёк начнёт гаснуть", "Друг", "Отправляется, пока TikTok открыт. Если огонёк сгорит раньше выбранного времени, он уйдёт за час до конца.", "Огонёк или любой стикер из избранного", "Получатели", "Все", "Выбрано: %d", "С кем поддерживать огоньки", "Снимите отметку с тех, кому не нужно отправлять огоньки автоматически.", "Со всеми", "Только выбранные", "Чатов с огоньком пока нет. Откройте «Входящие» в TikTok и вернитесь сюда.", "Сохранить",
+                "функций включено"});
         TABLES.put("uk", new String[]{
                 "TiktokPatchXposed", "Стрічка",
                 "Блокувати рекламу", "У стрічці, під час запуску та в інших списках відео",
                 "Приховати LIVE", "Трансляції у стрічці та кнопку LIVE",
                 "Приховати «Ви можете знати»", "Відео, запропоновані за вашими контактами",
-                "Перемотування на всіх відео", "Включно з короткими роликами",
+                "Перемотування на всіх відео", "Включно з короткими роликами: там смуги не видно, тягніть пальцем по нижньому краю відео",
                 "Коментарі",
                 "Репости з коментарем", "Діліться відео зі своїм коментарем",
                 "Новий вигляд профілю", "Профіль з вирівнюванням ліворуч і банерами",
@@ -155,7 +161,7 @@ final class I18n {
                 "Звук у приглушених відео", "Вмикає звук, який TikTok вимкнув через авторські права, якщо він ще є у відео", "Репост власних відео", "Кнопка «Репост» на ваших відео; інші правила TikTok залишаються",
                 "Шрифт", "Як у TikTok", "Системний", "З файлу", "Вибрати файл .ttf або .otf", "змінити", "Чуєш їх, доцю, га? Кумедна ж ти", "Цей файл не підходить як шрифт",
                 "Частота екрана", "%d Гц", "TikTok знижує частоту екрана до частоти відео (часто 30 кадрів), і прокрутка стає менш плавною. Вибрана частота тримається в усьому TikTok і застосовується одразу. Висока частота витрачає більше батареї.", "Зберегти у файл", "Відкрити файл", "Налаштування збережено", "Скопіювати текстом",
-                "Завантаження stories", "Утримуйте палець на story або добірці в профілі, щоб зберегти відео, фото чи звук", "Завантаження аватарок", "Відкрийте аватарку й утримуйте на ній палець, щоб зберегти її в повному розмірі",
+                "Завантаження історій", "Утримуйте палець на історії або добірці в профілі, щоб зберегти відео, фото чи звук", "Завантаження аватарок", "Відкрийте аватарку й утримуйте на ній палець, щоб зберегти її в повному розмірі",
                 "Приховати «друкує…»", "Співрозмовник не бачить, що ви набираєте повідомлення", "Приховати «в мережі»", "TikTok не повідомляє, що ви в застосунку, і в друзів не світиться зелена крапка. Ви їхній статус бачите. Крапка може зникнути не одразу, а за кілька хвилин",
                 "Час біля повідомлень", "Під кожним повідомленням у чаті — час надсилання",
                 "Стікери з чатів", "Утримуйте стікер у чаті — у меню з’явиться «Завантажити стікер»",
@@ -164,13 +170,15 @@ final class I18n {
                 "Бітрейт завантаження", "TikTok кодує 1080p приблизно в 4 Мбіт/с. Високий бітрейт дає серверу чистіше відео, яке він перетискає для глядачів: менше «каші» в русі й на дрібних деталях. Понад 30 Мбіт/с різниця вже не зберігається. Файл більший, завантаження довше",
                 "Усі чати позначено прочитаними", "Не вдалося позначити чати прочитаними", "Прочитати все", "Непрочитаних чатів немає",
                 "Прочитати всі чати?", "Буде позначено прочитаними чатів: %d. Співрозмовники це побачать.",
-                "%d Мбіт/с"});
+                "%d Мбіт/с",
+                "Налаштування автовогників", "Час надсилання", "Авто", "Коли згасає", "У свій час", "Сьогодні %s", "Щойно вогник почне згасати", "Друг", "Надсилається, поки TikTok відкритий. Якщо вогник згасне раніше за вибраний час, його буде надіслано за годину до кінця.", "Вогник або будь-який стікер з обраного", "Отримувачі", "Усі", "Вибрано: %d", "З ким підтримувати вогники", "Зніміть позначку з тих, кому не треба надсилати вогники автоматично.", "З усіма", "Лише вибрані", "Чатів із вогником поки немає. Відкрийте «Вхідні» в TikTok і поверніться сюди.", "Зберегти",
+                "функцій увімкнено"});
         TABLES.put("de", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Werbung blockieren", "Im Feed, beim Start und in anderen Videolisten",
                 "LIVE ausblenden", "Livestreams im Feed und die LIVE-Schaltfläche",
                 "„Personen, die du kennen könntest“ ausblenden", "Videos, die anhand deiner Kontakte vorgeschlagen werden",
-                "Suchleiste bei allen Videos", "Auch bei kurzen Videos",
+                "Suchleiste bei allen Videos", "Auch bei kurzen Videos: Dort bleibt die Leiste unsichtbar, zieh am unteren Rand des Videos",
                 "Kommentare",
                 "Reposts mit Kommentar", "Videos mit eigenem Kommentar reposten",
                 "Neues Profillayout", "Linksbündiges Profil mit Bannern",
@@ -198,13 +206,15 @@ final class I18n {
                 "Upload-Bitrate", "TikTok kodiert 1080p mit etwa 4 Mbit/s. Eine höhere Bitrate gibt seinem Server ein saubereres Video, das er für Zuschauer neu kodiert: weniger Matsch bei Bewegung und feinen Details. Über 30 Mbit/s bleibt nichts mehr erhalten. Größere Datei, langsamerer Upload",
                 "Alle Chats als gelesen markiert", "Chats konnten nicht als gelesen markiert werden", "Alle lesen", "Keine ungelesenen Chats",
                 "Alle Chats lesen?", "Als gelesen markiert werden %d Chats. Deine Kontakte sehen das.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Einstellungen für Auto-Flammen", "Sendezeit", "Auto", "Wenn sie erlischt", "Zu meiner Zeit", "Heute %s", "Sobald die Flamme zu erlöschen beginnt", "Freund", "Wird gesendet, solange TikTok geöffnet ist. Würde eine Flamme vor der gewählten Zeit enden, geht sie eine Stunde vor dem Ende raus.", "Die Flamme oder ein Sticker aus deinen Favoriten", "Empfänger", "Alle", "Ausgewählt: %d", "Mit wem Flammen halten", "Entferne das Häkchen bei allen, die keine automatischen Flammen bekommen sollen.", "Mit allen", "Nur ausgewählte", "Noch keine Chats mit Flamme. Öffne in TikTok den Posteingang und komm zurück.", "Speichern",
+                "Funktionen an"});
         TABLES.put("es", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anuncios", "En el feed, al iniciar y en otras listas de vídeos",
                 "Ocultar LIVE", "Directos en el feed y el botón LIVE",
                 "Ocultar «Personas que quizá conozcas»", "Vídeos sugeridos a partir de tus contactos",
-                "Barra de progreso en todos los vídeos", "También en vídeos cortos",
+                "Barra de progreso en todos los vídeos", "También en vídeos cortos: ahí la barra queda oculta, desliza por el borde inferior del vídeo",
                 "Comentarios",
                 "Reposts con comentario", "Republica vídeos con tu propio comentario",
                 "Nuevo diseño de perfil", "Perfil alineado a la izquierda con banners",
@@ -232,13 +242,15 @@ final class I18n {
                 "Bitrate de subida", "TikTok codifica 1080p a unos 4 Mbit/s. Un bitrate mayor da a su servidor un video más limpio para recodificar: menos borrones en movimiento y detalles. Por encima de 30 Mbit/s ya no se conserva más. Archivo más grande, subida más lenta",
                 "Todos los chats marcados como leídos", "No se pudieron marcar los chats como leídos", "Leer todo", "No hay chats sin leer",
                 "¿Leer todos los chats?", "Se marcarán como leídos %d chats. Los demás lo verán.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Ajustes de rachas automáticas", "Hora de envío", "Auto", "Al apagarse", "A mi hora", "Hoy %s", "En cuanto la racha empiece a apagarse", "Amigo", "Se envía mientras TikTok está abierto. Si una racha terminaría antes de la hora elegida, se renueva una hora antes del final.", "La llama o cualquier sticker de tus favoritos", "Destinatarios", "Todos", "Seleccionados: %d", "Con quién mantener rachas", "Desmarca a quienes no deben recibir rachas automáticas.", "Con todos", "Solo seleccionados", "Aún no hay chats con racha. Abre la Bandeja de entrada en TikTok y vuelve aquí.", "Guardar",
+                "funciones activas"});
         TABLES.put("pt", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Bloquear anúncios", "No feed, ao abrir e em outras listas de vídeos",
                 "Ocultar LIVE", "Transmissões ao vivo no feed e o botão LIVE",
                 "Ocultar “Pessoas que você talvez conheça”", "Vídeos sugeridos a partir dos seus contatos",
-                "Barra de progresso em todos os vídeos", "Inclusive em vídeos curtos",
+                "Barra de progresso em todos os vídeos", "Também em vídeos curtos: lá a barra fica oculta, arraste pela borda inferior do vídeo",
                 "Comentários",
                 "Reposts com comentário", "Republique vídeos com seu próprio comentário",
                 "Novo layout de perfil", "Perfil alinhado à esquerda com banners",
@@ -266,13 +278,15 @@ final class I18n {
                 "Bitrate de envio", "O TikTok codifica 1080p a cerca de 4 Mbit/s. Um bitrate maior dá ao servidor um vídeo mais limpo para recodificar: menos borrão em movimento e detalhes. Acima de 30 Mbit/s nada mais é mantido. Arquivo maior, envio mais lento",
                 "Todos os chats marcados como lidos", "Não foi possível marcar os chats como lidos", "Ler tudo", "Nenhum chat não lido",
                 "Ler todos os chats?", "Serão marcados como lidos %d chats. Os outros vão ver.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Ajustes das ofensivas automáticas", "Hora de envio", "Auto", "Ao apagar", "No meu horário", "Hoje %s", "Assim que a ofensiva começar a apagar", "Amigo", "Enviado enquanto o TikTok está aberto. Se uma ofensiva terminar antes do horário escolhido, ela é renovada uma hora antes do fim.", "A chama ou qualquer figurinha dos favoritos", "Destinatários", "Todos", "Selecionados: %d", "Com quem manter ofensivas", "Desmarque quem não deve receber ofensivas automáticas.", "Com todos", "Só selecionados", "Ainda não há conversas com ofensiva. Abra a Caixa de entrada no TikTok e volte aqui.", "Salvar",
+                "funções ativas"});
         TABLES.put("fr", new String[]{
                 "TiktokPatchXposed", "Fil",
                 "Bloquer les publicités", "Dans le fil, au démarrage et dans les autres listes de vidéos",
                 "Masquer les LIVE", "Les lives dans le fil et le bouton LIVE",
                 "Masquer « Personnes que vous pourriez connaître »", "Vidéos suggérées à partir de vos contacts",
-                "Barre de progression partout", "Même sur les vidéos courtes",
+                "Barre de progression partout", "Y compris les vidéos courtes : la barre y reste cachée, faites glisser le long du bas de la vidéo",
                 "Commentaires",
                 "Republications avec commentaire", "Republiez des vidéos avec votre propre commentaire",
                 "Nouvelle mise en page du profil", "Profil aligné à gauche avec bannières",
@@ -300,13 +314,15 @@ final class I18n {
                 "Débit d’envoi", "TikTok encode le 1080p à environ 4 Mbit/s. Un débit plus élevé donne à son serveur une vidéo plus propre à réencoder : moins de bouillie en mouvement et dans les détails. Au-delà de 30 Mbit/s, rien de plus n’est conservé. Fichier plus lourd, envoi plus lent",
                 "Toutes les discussions marquées comme lues", "Impossible de marquer les discussions comme lues", "Tout lire", "Aucune discussion non lue",
                 "Tout marquer comme lu ?", "%d discussions seront marquées comme lues. Vos contacts le verront.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Réglages des flammes auto", "Heure d’envoi", "Auto", "Quand elle s’éteint", "À mon heure", "Aujourd’hui %s", "Dès que la flamme commence à s’éteindre", "Ami", "Envoyé tant que TikTok est ouvert. Si une flamme devait finir avant l’heure choisie, elle est renouvelée une heure avant la fin.", "La flamme ou un sticker de vos favoris", "Destinataires", "Tous", "Sélectionnés : %d", "Avec qui garder les flammes", "Décochez les personnes qui ne doivent pas recevoir de flammes automatiques.", "Avec tous", "Sélection uniquement", "Pas encore de discussion avec flamme. Ouvrez la boîte de réception de TikTok, puis revenez.", "Enregistrer",
+                "fonctions activées"});
         TABLES.put("it", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blocca pubblicità", "Nel feed, all'avvio e in altri elenchi di video",
                 "Nascondi LIVE", "Dirette nel feed e il pulsante LIVE",
                 "Nascondi «Persone che potresti conoscere»", "Video suggeriti in base ai tuoi contatti",
-                "Barra di avanzamento ovunque", "Anche nei video brevi",
+                "Barra di avanzamento ovunque", "Anche nei video brevi: lì la barra resta nascosta, trascina lungo il bordo inferiore del video",
                 "Commenti",
                 "Repost con commento", "Ripubblica video con un tuo commento",
                 "Nuovo layout del profilo", "Profilo allineato a sinistra con banner",
@@ -334,13 +350,15 @@ final class I18n {
                 "Bitrate di caricamento", "TikTok codifica il 1080p a circa 4 Mbit/s. Un bitrate più alto dà al server un video più pulito da ricodificare: meno sfocature nel movimento e nei dettagli. Oltre 30 Mbit/s non si conserva altro. File più grande, caricamento più lento",
                 "Tutte le chat segnate come lette", "Impossibile segnare le chat come lette", "Leggi tutto", "Nessuna chat non letta",
                 "Leggere tutte le chat?", "Verranno segnate come lette %d chat. Gli altri lo vedranno.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Impostazioni fiamme automatiche", "Orario di invio", "Auto", "Quando si spegne", "Al mio orario", "Oggi %s", "Appena la fiamma inizia a spegnersi", "Amico", "Inviato mentre TikTok è aperto. Se una fiamma finisse prima dell’orario scelto, viene rinnovata un’ora prima della fine.", "La fiamma o uno sticker dai preferiti", "Destinatari", "Tutti", "Selezionati: %d", "Con chi mantenere le fiamme", "Togli la spunta a chi non deve ricevere fiamme automatiche.", "Con tutti", "Solo selezionati", "Ancora nessuna chat con fiamma. Apri la Posta in arrivo di TikTok e torna qui.", "Salva",
+                "funzioni attive"});
         TABLES.put("pl", new String[]{
                 "TiktokPatchXposed", "Kanał",
                 "Blokuj reklamy", "W kanale, przy uruchamianiu i na innych listach filmów",
                 "Ukryj LIVE", "Transmisje na żywo w kanale i przycisk LIVE",
                 "Ukryj „Osoby, które możesz znać”", "Filmy proponowane na podstawie kontaktów",
-                "Pasek przewijania we wszystkich filmach", "Także w krótkich filmach",
+                "Pasek przewijania we wszystkich filmach", "Także w krótkich filmach: tam pasek jest niewidoczny, przeciągnij po dolnej krawędzi filmu",
                 "Komentarze",
                 "Udostępnienia z komentarzem", "Udostępniaj filmy z własnym komentarzem",
                 "Nowy wygląd profilu", "Profil wyrównany do lewej z banerami",
@@ -368,13 +386,15 @@ final class I18n {
                 "Bitrate przesyłania", "TikTok koduje 1080p w ok. 4 Mbit/s. Wyższy bitrate daje serwerowi czystszy film do ponownego kodowania: mniej rozmycia w ruchu i detalach. Powyżej 30 Mbit/s nic więcej nie zostaje. Większy plik, wolniejsze przesyłanie",
                 "Wszystkie czaty oznaczone jako przeczytane", "Nie udało się oznaczyć czatów jako przeczytanych", "Przeczytaj wszystko", "Brak nieprzeczytanych czatów",
                 "Przeczytać wszystkie czaty?", "Zostanie oznaczonych czatów: %d. Rozmówcy to zobaczą.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Ustawienia autopłomyków", "Godzina wysyłki", "Auto", "Gdy gaśnie", "O mojej porze", "Dzisiaj %s", "Gdy tylko płomyk zacznie gasnąć", "Znajomy", "Wysyłane, gdy TikTok jest otwarty. Jeśli płomyk zgasłby przed wybraną godziną, zostanie odnowiony godzinę przed końcem.", "Płomyk lub dowolna naklejka z ulubionych", "Odbiorcy", "Wszyscy", "Wybrano: %d", "Z kim podtrzymywać płomyki", "Odznacz osoby, którym nie trzeba wysyłać płomyków automatycznie.", "Ze wszystkimi", "Tylko wybrani", "Nie ma jeszcze czatów z płomykiem. Otwórz Skrzynkę w TikToku i wróć tutaj.", "Zapisz",
+                "funkcji włączonych"});
         TABLES.put("tr", new String[]{
                 "TiktokPatchXposed", "Akış",
                 "Reklamları engelle", "Akışta, açılışta ve diğer video listelerinde",
                 "LIVE'ı gizle", "Akıştaki canlı yayınlar ve LIVE düğmesi",
                 "“Tanıyor olabileceğin kişiler”i gizle", "Kişilerine göre önerilen videolar",
-                "Tüm videolarda ilerleme çubuğu", "Kısa videolar dahil",
+                "Tüm videolarda ilerleme çubuğu", "Kısa videolarda da: orada çubuk görünmez, videonun alt kenarında parmağını kaydır",
                 "Yorumlar",
                 "Yorumlu yeniden paylaşım", "Videoları kendi yorumunla yeniden paylaş",
                 "Yeni profil düzeni", "Bannerlı, sola hizalı profil",
@@ -402,13 +422,15 @@ final class I18n {
                 "Yükleme bit hızı", "TikTok 1080p videoyu yaklaşık 4 Mbit/s ile kodlar. Yüksek bit hızı sunucuya izleyiciler için yeniden kodlanacak daha temiz bir video verir: harekette ve ince detayda daha az bulanıklık. 30 Mbit/s üstünde fark korunmaz. Dosya büyür, yükleme yavaşlar",
                 "Tüm sohbetler okundu olarak işaretlendi", "Sohbetler okundu olarak işaretlenemedi", "Tümünü oku", "Okunmamış sohbet yok",
                 "Tüm sohbetler okunsun mu?", "Okundu yapılacak sohbet: %d. Karşı taraf bunu görecek.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Otomatik seri ayarları", "Gönderme saati", "Otomatik", "Sönmeye başlayınca", "Benim saatimde", "Bugün %s", "Seri sönmeye başlar başlamaz", "Arkadaş", "TikTok açıkken gönderilir. Seri seçilen saatten önce bitecekse, bitişten bir saat önce yenilenir.", "Alev ya da favorilerindeki herhangi bir çıkartma", "Alıcılar", "Herkes", "Seçili: %d", "Kimle seri sürdürülsün", "Otomatik seri gönderilmeyecek kişilerin işaretini kaldırın.", "Herkesle", "Yalnızca seçilenler", "Henüz serili sohbet yok. TikTok'ta Gelen Kutusu'nu açıp buraya dönün.", "Kaydet",
+                "özellik açık"});
         TABLES.put("id", new String[]{
                 "TiktokPatchXposed", "Feed",
                 "Blokir iklan", "Di feed, saat dibuka, dan di daftar video lainnya",
                 "Sembunyikan LIVE", "Siaran langsung di feed dan tombol LIVE",
                 "Sembunyikan “Orang yang mungkin kamu kenal”", "Video yang disarankan dari kontakmu",
-                "Bilah progres di semua video", "Termasuk video pendek",
+                "Bilah progres di semua video", "Termasuk video pendek: di sana bilahnya tersembunyi, geser di tepi bawah video",
                 "Komentar",
                 "Repost dengan komentar", "Posting ulang video dengan komentarmu sendiri",
                 "Tata letak profil baru", "Profil rata kiri dengan banner",
@@ -436,10 +458,12 @@ final class I18n {
                 "Bitrate unggahan", "TikTok menyandikan 1080p sekitar 4 Mbit/s. Bitrate lebih tinggi memberi server video yang lebih bersih untuk disandikan ulang: lebih sedikit buram saat bergerak dan pada detail. Di atas 30 Mbit/s tidak ada lagi yang dipertahankan. File lebih besar, unggahan lebih lama",
                 "Semua chat ditandai sudah dibaca", "Gagal menandai chat sudah dibaca", "Baca semua", "Tidak ada chat belum dibaca",
                 "Baca semua chat?", "Chat yang ditandai dibaca: %d. Lawan bicara akan melihatnya.",
-                "%d Mbit/s"});
+                "%d Mbit/s",
+                "Pengaturan streak otomatis", "Waktu kirim", "Otomatis", "Saat meredup", "Di waktu saya", "Hari ini %s", "Begitu streak mulai meredup", "Teman", "Dikirim saat TikTok terbuka. Jika streak berakhir sebelum waktu yang dipilih, streak diperbarui satu jam sebelum berakhir.", "Api atau stiker apa pun dari favorit", "Penerima", "Semua", "Dipilih: %d", "Dengan siapa menjaga streak", "Hapus centang orang yang tidak perlu dikirimi streak otomatis.", "Dengan semua", "Hanya yang dipilih", "Belum ada chat dengan streak. Buka Kotak Masuk di TikTok, lalu kembali ke sini.", "Simpan",
+                "fitur aktif"});
         TABLES.put("ar", new String[]{
                 "TiktokPatchXposed", "الموجز", "حظر الإعلانات", "الإعلانات في الموجز وعند بدء التشغيل وقوائم الفيديو الأخرى", "إخفاء البث المباشر",
-                "البث المباشر في الموجز وزر LIVE", "إخفاء «أشخاص قد تعرفهم»", "الفيديوهات المقترحة من جهات اتصالك", "شريط التقدم في كل فيديو", "بما في ذلك الفيديوهات القصيرة",
+                "البث المباشر في الموجز وزر LIVE", "إخفاء «أشخاص قد تعرفهم»", "الفيديوهات المقترحة من جهات اتصالك", "شريط التقدم في كل فيديو", "حتى في المقاطع القصيرة: يبقى الشريط مخفيًا هناك، اسحب على الحافة السفلية للفيديو",
                 "التعليقات", "إعادة نشر التعليقات", "أعد نشر الفيديوهات مع تعليقك", "تصميم جديد للملف الشخصي", "ملف شخصي بمحاذاة اليسار مع لافتات", "ميزات TikTok المخفية",
                 "تسريع بالضغط المطوّل، والتعليقات في المفضلة، والتعليقات الصوتية والمزيد", "التنزيلات والروابط", "التنزيل بدون علامة مائية", "تنزيل أي فيديو",
                 "حتى إذا عطّل صاحب الفيديو التنزيل", "السماح بلقطات الشاشة", "لقطات الشاشة وتسجيلها في جميع المواضع", "روابط نظيفة", "إزالة معلمات التتبع من الروابط المنسوخة",
@@ -499,7 +523,9 @@ final class I18n {
                 "معدل بت الرفع", "يرمّز TikTok دقة 1080p بنحو 4 ميغابت/ث. معدل البت الأعلى يمنح خادمه فيديو أنظف لإعادة ترميزه للمشاهدين: ضبابية أقل في الحركة والتفاصيل. فوق 30 ميغابت/ث لا يُحفظ فرق إضافي. ملف أكبر ورفع أبطأ",
                 "تم تحديد كل المحادثات كمقروءة", "تعذّر تحديد المحادثات كمقروءة", "قراءة الكل", "لا توجد محادثات غير مقروءة",
                 "قراءة كل المحادثات؟", "سيتم تحديد %d محادثة كمقروءة، وسيرى الآخرون ذلك.",
-                "%d ميغابت/ث"});
+                "%d ميغابت/ث",
+                "إعدادات الشعلات التلقائية", "وقت الإرسال", "تلقائي", "عندما تخبو", "في وقتي", "اليوم %s", "بمجرد أن تبدأ الشعلة بالخفوت", "صديق", "يُرسل أثناء فتح TikTok. إذا كانت الشعلة ستنتهي قبل الوقت المختار، فستُجدد قبل النهاية بساعة.", "الشعلة أو أي ملصق من المفضلة", "المستلمون", "الجميع", "المحدد: %d", "مع من تحافظ على الشعلات", "ألغِ تحديد من لا يجب أن تُرسل لهم الشعلات تلقائيًا.", "مع الجميع", "المحددون فقط", "لا توجد دردشات بشعلة بعد. افتح البريد الوارد في TikTok ثم عد إلى هنا.", "حفظ",
+                "ميزة مفعّلة"});
     }
 
     private static volatile String[] current = TABLES.get("en");

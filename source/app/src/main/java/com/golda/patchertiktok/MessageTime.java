@@ -88,9 +88,12 @@ final class MessageTime {
         }
         Context context = row.getContext();
         label.setText(format(DateFormat.is24HourFormat(context)).format(new Date((Long) created)));
-        // TikTok sets this padding on every bind, so adding to it never accumulates.
-        row.setPadding(row.getPaddingLeft(), row.getPaddingTop(), row.getPaddingRight(),
-                row.getPaddingBottom() + label.height());
+        // TikTok sets this padding on every bind; if a bind leaves ours in place, it is not added twice.
+        int bottom = row.getPaddingBottom();
+        if (bottom == label.applied) bottom = label.base;
+        label.base = bottom;
+        label.applied = bottom + label.height();
+        row.setPadding(row.getPaddingLeft(), row.getPaddingTop(), row.getPaddingRight(), label.applied);
     }
 
     /** Rows bind on the main thread only, so one formatter per clock style is reused. */
@@ -113,6 +116,9 @@ final class MessageTime {
         private final int gap;
         private String text;
         private View bubble;
+        /** TikTok's own bottom padding, and the one set with room for the time. */
+        int base;
+        int applied = -1;
 
         Label(ViewGroup row) {
             this.row = row;
@@ -179,17 +185,37 @@ final class MessageTime {
         @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 
+    /** Per row model class: the fields leading to its message, found once (rows bind while scrolling). */
+    private static final Map<Class<?>, Field[]> PATHS = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** The IM message inside the bound row model: the object with getCreatedAt and getUuid, a few fields deep. */
     static Object message(Object item) {
-        Map<Object, Boolean> seen = new IdentityHashMap<>();
+        if (item == null) return null;
+        Field[] path = PATHS.get(item.getClass());
+        if (path != null) {
+            Object value = item;
+            for (Field field : path) {
+                try {
+                    value = value == null ? null : field.get(value);
+                } catch (Throwable error) {
+                    value = null;
+                }
+            }
+            if (value != null && isMessage(value)) return value;
+        }
+        Map<Object, Field[]> routes = new IdentityHashMap<>();
         ArrayDeque<Object[]> queue = new ArrayDeque<>();
-        queue.add(new Object[]{item, 0});
-        while (!queue.isEmpty() && seen.size() < 200) {
+        queue.add(new Object[]{item, 0, new Field[0]});
+        while (!queue.isEmpty() && routes.size() < 200) {
             Object[] entry = queue.poll();
             Object value = entry[0];
             int depth = (Integer) entry[1];
-            if (value == null || seen.put(value, Boolean.TRUE) != null) continue;
-            if (Reflect.method(value.getClass(), "getCreatedAt") != null && Reflect.method(value.getClass(), "getUuid") != null) return value;
+            Field[] route = (Field[]) entry[2];
+            if (value == null || routes.put(value, route) != null) continue;
+            if (isMessage(value)) {
+                PATHS.put(item.getClass(), route);
+                return value;
+            }
             if (depth >= 4) continue;
             for (Class<?> type = value.getClass(); type != null && type != Object.class; type = type.getSuperclass()) {
                 if (type.getName().startsWith("java.") || type.getName().startsWith("android.")) break;
@@ -200,7 +226,10 @@ final class MessageTime {
                     try {
                         field.setAccessible(true);
                         Object next = field.get(value);
-                        if (next != null) queue.add(new Object[]{next, depth + 1});
+                        if (next == null) continue;
+                        Field[] longer = java.util.Arrays.copyOf(route, route.length + 1);
+                        longer[route.length] = field;
+                        queue.add(new Object[]{next, depth + 1, longer});
                     } catch (Throwable ignored) {
                         // Next field.
                     }
@@ -208,5 +237,9 @@ final class MessageTime {
             }
         }
         return null;
+    }
+
+    private static boolean isMessage(Object value) {
+        return Reflect.method(value.getClass(), "getCreatedAt") != null && Reflect.method(value.getClass(), "getUuid") != null;
     }
 }

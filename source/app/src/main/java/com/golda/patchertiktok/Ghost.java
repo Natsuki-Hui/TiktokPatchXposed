@@ -8,8 +8,9 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Invisible mode. TikTok reports a story view with its regular play statistics (marked with story
- * fields) and with a separate "seen" receipt that highlights use too, a profile visit with a separate call, and, with view history on, video views of people
- * you follow through the same statistics. Those requests are cancelled before they leave, so the
+ * fields) and with a separate "seen" receipt that highlights use too, a profile visit with a
+ * separate call, and, with view history on, video views of people you follow through the same
+ * statistics. Those requests are cancelled before they leave, so the
  * author never sees the view; the story, profile or video itself loads as usual.
  */
 final class Ghost {
