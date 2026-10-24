@@ -83,6 +83,18 @@ final class AbOverrides {
         VALUES.put("comment_auto_translation_enabled", true);
         VALUES.put("comment_auto_translation_consumer_style", 2);
         VALUES.put("comment_auto_translation_not_translate_by_default", true);
+        // TikTok's floating video window (needs "display over other apps"); phones and tablets.
+        if (Prefs.on(Prefs.PIP_FEED)) {
+            VALUES.put("enable_pip_feed", 1);
+            VALUES.put("enable_pip_feed_pad", 1);
+        }
+        // An unedited video goes up as the file itself (TikTok's own "upload directly"), and the
+        // gallery lets 4K videos in instead of refusing them.
+        if (Prefs.on(Prefs.UPLOAD_ORIGINAL)) {
+            VALUES.put("enable_4k_import_benchmark", true);
+            VALUES.put("studio_enable_ve_copy_with_metadata", true);
+            VALUES.put("studio_enable_upload_source_file_directly", true);
+        }
         if (Prefs.on(Prefs.CAMERA_EXTRAS)) {
             VALUES.put("camera_teleprompter_mode", 1);
             VALUES.put("video_capture_green_screen_standalone", true);

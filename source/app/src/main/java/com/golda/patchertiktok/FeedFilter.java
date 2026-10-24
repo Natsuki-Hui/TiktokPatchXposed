@@ -228,6 +228,8 @@ final class FeedFilter {
         if (type instanceof Number && ((Number) type).intValue() == 101) return true;
         if (Reflect.getBoolean(item, "isLive") || Reflect.callBoolean(item, "isLive")
                 || Reflect.callBoolean(item, "isLiveReplay")) return true;
+        // A LIVE room cell carries its room; an empty struct alone does not count.
+        if (Reflect.call(Reflect.call(item, "getRoomFeedCellStruct"), "getNewLiveRoomData") != null) return true;
         return equalsIgnoreCase(Reflect.get(item, "contentType"), "live")
                 || equalsIgnoreCase(Reflect.get(item, "content_type"), "live")
                 || equalsIgnoreCase(Reflect.get(item, "schema"), "aweme://live");
@@ -279,6 +281,71 @@ final class FeedFilter {
             }
         }
         RuntimeLog.log("friend card insertion: " + hooked + " hook(s)");
+        installInsertions(loader);
+    }
+
+    private static final String PANEL = "com.ss.android.ugc.aweme.feed.panel.BaseListFragmentPanel";
+
+    /**
+     * TikTok also puts videos, LIVE rooms and cards into a feed that is already loaded, past
+     * FeedItemList: the panel's insertItemList takes a payload holding the list (found by its
+     * "fall to downgrade" log line), and a positional insert takes (int, List) (found by its
+     * "not response for position" line). Both lists are filtered; an insert left empty is skipped.
+     */
+    private static void installInsertions(ClassLoader loader) {
+        Class<?> panel = Hooks.findClass(PANEL, loader);
+        if (panel == null) return;
+        int hooked = 0;
+        for (String hit : Discovery.methodsUsing("insertItemList fall to downgrade logic")) {
+            for (Method method : own(panel, hit)) {
+                if (method.getParameterCount() != 1 || method.getParameterTypes()[0].isPrimitive()) continue;
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) throws IllegalAccessException {
+                        Object payload = param.args[0];
+                        if (payload == null) return;
+                        for (java.lang.reflect.Field field : payload.getClass().getDeclaredFields()) {
+                            if (field.getType() != List.class || java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+                            field.setAccessible(true);
+                            Object value = field.get(payload);
+                            if (!(value instanceof List<?>) || ((List<?>) value).isEmpty()) continue;
+                            List<?> filtered = filter((List<?>) value);
+                            if (filtered == value) continue;
+                            if (filtered.isEmpty()) {
+                                param.setResult(null);
+                                return;
+                            }
+                            field.set(payload, filtered);
+                        }
+                    }
+                });
+                hooked++;
+            }
+        }
+        for (String hit : Discovery.methodsUsing("insert called,but not response for position:")) {
+            for (Method method : own(panel, hit)) {
+                Class<?>[] p = method.getParameterTypes();
+                if (p.length != 2 || p[0] != int.class || p[1] != List.class) continue;
+                Hooks.hook(method, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) {
+                        if (!(param.args[1] instanceof List<?>)) return;
+                        List<?> filtered = filter((List<?>) param.args[1]);
+                        if (filtered == param.args[1]) return;
+                        if (filtered.isEmpty()) param.setResult(null);
+                        else param.args[1] = filtered;
+                    }
+                });
+                hooked++;
+            }
+        }
+        RuntimeLog.log("feed insertions: " + hooked + " hook(s)");
+    }
+
+    private static List<Method> own(Class<?> type, String hit) {
+        List<Method> found = new ArrayList<>();
+        String[] parts = hit.split("#", 2);
+        if (parts.length != 2 || !parts[0].equals(type.getName())) return found;
+        for (Method method : type.getDeclaredMethods()) if (method.getName().equals(parts[1])) found.add(method);
+        return found;
     }
 
     private static boolean isSuggestedAcquaintance(Object aweme) {

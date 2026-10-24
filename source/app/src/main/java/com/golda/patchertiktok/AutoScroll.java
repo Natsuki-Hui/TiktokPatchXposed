@@ -18,7 +18,9 @@ import java.lang.reflect.Method;
 
 /**
  * When a video ends, the feed moves on to the next one, on the pages that show videos full screen:
- * Following, search and chats. Profiles stay put, and For You is left to TikTok. TikTok loops
+ * Following, search and chats, and in a person's videos (profile, liked list) when switched on
+ * there: those have their own switch, so turning it on in search does not move profiles. For You
+ * is left to TikTok. Both switches are off until the user turns them on. TikTok loops
  * videos, so the end is seen as the player position jumping from the last moments back to the start. A photo post ends once each
  * photo has had its few seconds, or when its music runs out. Nothing happens while a comment
  * sheet, menu or dialog covers the video, and if TikTok's own auto-scroll already moved on, this
@@ -32,6 +34,8 @@ final class AutoScroll {
     private static final String SHARE_PACKAGE = "com.ss.android.ugc.aweme.share.improve.pkg.AwemeSharePackage";
     /** For You, where TikTok runs auto-scroll itself with its own switch. */
     private static final String RECOMMEND = "com.ss.android.ugc.aweme.feed.panel.RecommendFeedFragmentPanel";
+    /** TikTok's own auto-scroll, one per feed. */
+    private static final String NATIVE = "com.ss.android.ugc.feed.platform.panel.autoscroll.AutoScrollComponent";
     private static final long TICK_MS = 400L;
     private static final long PHOTO_MS = 3_000L;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -88,6 +92,49 @@ final class AutoScroll {
     }
 
     /**
+     * TikTok's own auto-scroll (opened up by "Extra features") lives in every feed, and in some of
+     * them, such as a profile's liked videos, it starts on by itself. It is kept to For You, where
+     * its switch is; elsewhere our switch decides. Its step to the next video is the component's
+     * method with the weak-internet toast; the feed is For You when its first-show key is
+     * "first_show_auto_scroll" (search has its own key, other feeds none).
+     */
+    static void installNative(ClassLoader loader) {
+        Class<?> component = Hooks.findClass(NATIVE, loader);
+        if (component == null) {
+            RuntimeLog.log("native auto-scroll limit unavailable: component not found");
+            return;
+        }
+        Method key = null;
+        for (String hit : Discovery.methodsUsing("first_show_auto_scroll")) {
+            Method method = own(component, hit);
+            if (method != null && method.getReturnType() == String.class && method.getParameterCount() == 0) key = method;
+        }
+        int hooks = 0;
+        if (key != null) {
+            key.setAccessible(true);
+            Method feedKey = key;
+            for (String hit : Discovery.methodsUsing("auto_scroll_weak_internet_toast")) {
+                Method step = own(component, hit);
+                if (step == null || step.getReturnType() != void.class || step.getParameterCount() != 0) continue;
+                Hooks.hook(step, new Hooks.Hook() {
+                    @Override protected void before(Hooks.Call param) {
+                        if (!"first_show_auto_scroll".equals(invoke(feedKey, param.thisObject))) param.setResult(null);
+                    }
+                });
+                hooks++;
+            }
+        }
+        RuntimeLog.log("native auto-scroll limit: steps=" + hooks);
+    }
+
+    private static Method own(Class<?> type, String hit) {
+        String[] parts = hit.split("#", 2);
+        if (parts.length != 2 || !parts[0].equals(type.getName())) return null;
+        for (Method method : type.getDeclaredMethods()) if (method.getName().equals(parts[1])) return method;
+        return null;
+    }
+
+    /**
      * The switch in the panel a long press opens. On For You, TikTok's menu has its own
      * auto-scroll switch, so nothing is added there. Elsewhere (profiles, chats, search) the long
      * press opens the share panel: it is recognised by TikTok packing the video for sharing just
@@ -110,7 +157,7 @@ final class AutoScroll {
             @Override protected void after(Hooks.Call param) {
                 if (!Touch.pressing() || android.os.SystemClock.uptimeMillis() - sharePacked > 3_000L) return;
                 Object current = shown.get();
-                if (current == null || recommended(current) || profile(current)) return;
+                if (current == null || recommended(current)) return;
                 android.view.Window window = ((android.app.Dialog) param.thisObject).getWindow();
                 if (window == null) return;
                 View decor = window.getDecorView();
@@ -215,11 +262,13 @@ final class AutoScroll {
         line.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
 
         Toggle toggle = new Toggle(anchor.getContext(), Palette.of(dark));
-        toggle.setChecked(Prefs.on(Prefs.AUTO_SCROLL), false);
+        Object shownPanel = shown.get();
+        String key = shownPanel == null ? Prefs.AUTO_SCROLL : key(shownPanel);
+        toggle.setChecked(Prefs.on(key), false);
         line.addView(toggle);
         line.setOnClickListener(view -> {
-            boolean on = !Prefs.on(Prefs.AUTO_SCROLL);
-            Prefs.set(Prefs.AUTO_SCROLL, on);
+            boolean on = !Prefs.on(key);
+            Prefs.set(key, on);
             toggle.setChecked(on, true);
             Object current = panel.get();
             if (on && current != null) started(current);
@@ -335,13 +384,12 @@ final class AutoScroll {
         return recommendPanel != null && recommendPanel.isInstance(feedPanel);
     }
 
+    /** The switch for this feed: a person's videos have their own. */
+    private static String key(Object feedPanel) {
+        return profile(feedPanel) ? Prefs.AUTO_SCROLL_PROFILES : Prefs.AUTO_SCROLL;
+    }
+
     private static void started(Object feedPanel) {
-        if (profile(feedPanel)) {
-            // Profiles are browsed video by video; they never move on by themselves.
-            MAIN.removeCallbacks(TICK);
-            panel = new WeakReference<>(null);
-            return;
-        }
         Object aweme = invoke(currentAweme, feedPanel);
         String id = aweme == null ? null : string(Reflect.get(aweme, "aid"));
         if (id == null) return;
@@ -358,14 +406,14 @@ final class AutoScroll {
             if (photos > 0) limit = AutoScrollPolicy.photoTime(photos, PHOTO_MS, music);
         }
         MAIN.removeCallbacks(TICK);
-        if (Prefs.on(Prefs.AUTO_SCROLL) && (duration > 0 || limit > 0)) MAIN.postDelayed(TICK, TICK_MS);
+        if (Prefs.on(key(feedPanel)) && (duration > 0 || limit > 0)) MAIN.postDelayed(TICK, TICK_MS);
     }
 
     private static final Runnable TICK = new Runnable() {
         @Override public void run() {
             Object feedPanel = panel.get();
             String id = playing;
-            if (feedPanel == null || id == null || !Prefs.on(Prefs.AUTO_SCROLL)) return;
+            if (feedPanel == null || id == null || !Prefs.on(key(feedPanel))) return;
             Object aweme = invoke(currentAweme, feedPanel);
             if (aweme == null || !id.equals(string(Reflect.get(aweme, "aid")))) return;
             Object value = Reflect.call(invoke(playerAbility, feedPanel), "getCurrentPosition");

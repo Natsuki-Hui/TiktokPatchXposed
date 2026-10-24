@@ -47,6 +47,7 @@ final class Module {
             run("message time", () -> MessageTime.install(loader));
             run("chat menu", () -> ChatMenu.install(loader));
             run("google login", () -> googleLoginFix(loader));
+            run("trackers", Analytics::installTrackers);
         }
         // Every process: the settings screen and the restart trampoline are swapped in here.
         run("settings host", SettingsEntry::installHost);
@@ -92,6 +93,15 @@ final class Module {
         run("hd upload", () -> HdUpload.install(loader));
         run("read receipts", () -> ReadReceipts.install(loader));
         run("read all", () -> InboxReadAll.install(loader));
+        run("comment author", () -> CommentAuthor.install(loader));
+        run("native auto-scroll", () -> AutoScroll.installNative(loader));
+        run("exact time", () -> ExactTime.install(loader));
+        run("exact counts", () -> ExactCounts.install(loader));
+        run("keep brightness", () -> Brightness.install(loader));
+        run("device checks", () -> DeviceChecks.install(loader));
+        run("playback quality", () -> PlaybackQuality.install(loader));
+        run("photo quality", () -> PhotoQuality.install(loader));
+        run("analytics", () -> Analytics.install(loader));
         run("comment translation", () -> {
             Runnable configure = () -> CommentTranslate.configure(Prefs.on(Prefs.AUTO_TRANSLATE), Prefs.text(Prefs.TRANSLATE_EXCLUDE));
             configure.run();

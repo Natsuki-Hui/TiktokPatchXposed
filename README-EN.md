@@ -7,7 +7,7 @@ turns on features TikTok rolls out only to some people, and adds many small thin
 everywhere, your own color, font and AMOLED theme, hiding parts of the screen, country flags,
 invisible mode and auto streaks. All settings live right inside TikTok.
 
-Current version: **4.3.1**. Tested on **TikTok 47.4.3** and **47.1.4** (Google Play and universal APK),
+Current version: **4.4.0**. Tested on **TikTok 47.4.3** and **47.1.4** (Google Play and universal APK),
 **Android 16**. Most features find what they need in TikTok by themselves, so
 they survive TikTok updates.
 
@@ -36,7 +36,7 @@ they survive TikTok updates.
 3. Force-stop TikTok and open it again.
 
 **Settings:** TikTok → Profile → ☰ → Settings and privacy → **TiktokPatchXposed** (the first row).
-The screen is translated into 12 languages (Arabic included) and follows TikTok's language. When a setting needs a
+The screen is translated into 13 languages (Arabic and Chinese included) and follows TikTok's language. When a setting needs a
 restart, a "Restart" button appears at the bottom. To update, install the new APK over the old
 one; settings are kept.
 
@@ -54,20 +54,26 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **Own filter**: by words, hashtags, authors, minimum likes and views.
 
 ### Playback
-- **Auto-scroll everywhere**: in search, following and chats (profiles don't scroll by themselves); photo posts by music length.
+- **Auto-scroll everywhere**: in search, following and chats; profiles and liked videos have their own switch in the
+  long-press menu. Off everywhere by default; photo posts by music length.
+- **Exact date and time**: on videos, stories, comments and reposts, with seconds if you like.
+- **Exact numbers**: likes, comments, shares, views and profile counts in full.
+- 🧪 **Picture-in-picture**: TikTok's own floating video window.
 - **3× speed** in TikTok's own speed menu.
 - **Screen refresh rate**: hold 60, 90 or 120 Hz; TikTok no longer lowers it to the video's frame rate.
 - **Own speeds** and **remember speed**.
 - **Resume where you left off**, **keep "Clear display"**.
 - **Seek on every video**: on short ones the bar stays hidden, drag along the bottom edge of the video.
 - 🧪 **Sound in muted videos**: brings back sound TikTok turned off over copyright, if the video still has it.
+- **Quality for Wi-Fi and mobile data separately** (best, saver or TikTok's choice), 🧪 **H.264 video**,
+  **no HDR**, 🧪 **photos in the best quality** (up to 8 MP).
 
 ### Interface
 - **Own accent color**: a palette or HEX; recolors TikTok's red in buttons, icons, likes and your name.
 - **Own font**: the system font or any `.ttf` / `.otf` from your phone instead of TikTok Sans.
 - **AMOLED theme**: pure black, turns TikTok's dark theme on by itself.
 - **Hide elements**: side buttons, the music disc, author and caption, the Tako button.
-- **Interface opacity** and **OLED burn-in protection**.
+- **Interface opacity**, **OLED burn-in protection** and **keep brightness** (TikTok no longer turns it up in the camera and editor).
 - **New profile layout**, **hide stories in the Inbox**.
 - **Time on messages**: under every chat message.
 - **"Read all"**: hold the Inbox tab.
@@ -76,7 +82,7 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **TikTok's translate buttons**: an icon on every foreign comment and "Translate all" in the
   comments header, even if TikTok never showed them to you.
 - **Auto-translate comments**: turns TikTok's translation on for all comments right away.
-- **Copy text only**, **author's country** (a flag next to the video date and in profiles).
+- **Copy text only**, **author's country** (a flag next to the video date, in profiles and in comments), **@username of commenters**.
 - **Comment reposts**; 🧪 **repost your own videos**.
 - 🧪 **Up to 9 photos in a comment**.
 
@@ -85,16 +91,20 @@ Features marked 🧪 work but are not fully tested. All new features are off by 
 - **All photos from a carousel**, **stickers and photos from comments**, **stickers from chats**.
 - **Save stories and highlights** (hold a story) and **profile photos** (hold the enlarged photo).
 - 🧪 **Upload in HD**, as with TikTok's "Upload HD" switched on, and a 🧪 bitrate choice: 12, 20 or 30 Mbit/s.
+- 🧪 **Upload the original (up to 4K)**: an unedited video goes up as the file itself, without TikTok re-encoding it.
 - **Clean links** (no tracking), **links in your browser**, **screenshots everywhere**.
 
 ### Privacy
 - 🧪 **Invisible mode**: not showing up in story (and highlight), profile and video views.
 - **In chats:** hide "typing…", 🧪 "online" and 🧪 "Read" (with "Mark as read" in a message's menu).
-- 🧪 **Block location**, 🧪 **hide VPN**, 🧪 **random device ID**.
+- 🧪 **Block location**, 🧪 **hide VPN**, 🧪 **random device ID**, 🧪 **hide root**,
+  🧪 **no motion tracking**, **no passkey prompts**.
+- **Analytics:** block third-party trackers (Google/Firebase, Facebook, AppsFlyer) and 🧪 don't send TikTok's analytics.
 
 ### Region
 - **Country**: SIM, carrier and time zone of about 190 countries (Germany by default).
 - **Recommendations in my language**.
+- 🧪 **Own recommendation region**: the SIM stays in the chosen country while the feed comes from another one.
 
 The module doesn't change the account's region or your IP address, so the result isn't guaranteed.
 

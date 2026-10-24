@@ -23,6 +23,8 @@ final class Prefs {
     static final String SCREENSHOTS = "allow_screenshots";
     static final String QUALITY_PICKER = "download_quality_picker";
     static final String AUTO_SCROLL = "auto_scroll_everywhere";
+    /** Auto-scroll in a person's videos (profile, liked list), switched on its own in the long-press menu. */
+    static final String AUTO_SCROLL_PROFILES = "auto_scroll_profiles";
     static final String COMMENT_MEDIA = "comment_media_save";
     /** Favourite sticker sent by auto streaks instead of the flame; empty for the flame. */
     static final String STREAK_STICKER = "auto_streak_sticker_id";
@@ -43,6 +45,9 @@ final class Prefs {
     static final String REGION = "region";
     /** With a region selected: keep recommendations in the user's language instead of the country's. */
     static final String REGION_LANGUAGE = "region_keep_language";
+    /** Recommendations from another country than the SIM's region. */
+    static final String FEED_REGION_OWN = "feed_region_own";
+    static final String FEED_REGION = "feed_region";
     static final String AUTO_STREAK = "auto_streak";
     static final String GHOST_STORIES = "ghost_stories";
     static final String GHOST_PROFILE = "ghost_profile_views";
@@ -80,6 +85,24 @@ final class Prefs {
     static final String OVERLAY_OPACITY = "overlay_opacity";
     static final String BURN_IN = "burn_in_protection";
     static final String AUTHOR_REGION = "author_region";
+    static final String COMMENT_HANDLE = "comment_handle";
+    static final String KEEP_BRIGHTNESS = "keep_brightness";
+    static final String EXACT_TIME = "exact_time";
+    static final String EXACT_TIME_SECONDS = "exact_time_seconds";
+    static final String EXACT_COUNTS = "exact_counts";
+    static final String HIDE_ROOT = "hide_root";
+    static final String HIDE_PASSKEY = "hide_passkey";
+    static final String NO_MOTION_SENSORS = "no_motion_sensors";
+    static final String NO_HDR = "no_hdr";
+    static final String PREFER_H264 = "prefer_h264";
+    static final String PHOTO_BEST = "photo_best";
+    static final String PIP_FEED = "pip_feed";
+    static final String NO_TRACKERS = "no_trackers";
+    static final String UPLOAD_ORIGINAL = "upload_original";
+    static final String NO_TIKTOK_ANALYTICS = "no_tiktok_analytics";
+    /** Playback quality per network: 0 TikTok's pick, 1 best, 2 smallest. */
+    static final String QUALITY_WIFI = "quality_wifi";
+    static final String QUALITY_MOBILE = "quality_mobile";
     static final String NO_LOGIN_WALL = "no_login_wall";
     static final String AUTO_TRANSLATE = "auto_translate_comments";
     static final String HIDE_BUTTONS = "hide_side_buttons";
@@ -128,8 +151,8 @@ final class Prefs {
     static final String DEFAULT_REGION = "de";
 
     /** Keys whose hooks only take effect when TikTok starts. */
-    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID, SELF_REPOST, FONT,
-            COMMENT_PHOTOS, NO_HASHTAG_LIMIT, SPEED_3X, CAMERA_EXTRAS};
+    static final String[] RESTART_KEYS = {COMMENT_REPOSTS, NEW_PROFILE, EXTRA_FEATURES, REGION, REGION_LANGUAGE, FEED_REGION_OWN, ADS, HIDE_INBOX_STORIES, ACCENT, AMOLED, SPOOF_ANDROID_ID, SELF_REPOST, FONT,
+            COMMENT_PHOTOS, NO_HASHTAG_LIMIT, SPEED_3X, CAMERA_EXTRAS, PIP_FEED, HIDE_PASSKEY, NO_MOTION_SENSORS, NO_TRACKERS, UPLOAD_ORIGINAL};
 
     private static final Map<String, Boolean> DEFAULTS = new ConcurrentHashMap<>();
     private static final Map<String, Boolean> FLAGS = new ConcurrentHashMap<>();
@@ -152,6 +175,7 @@ final class Prefs {
         DEFAULTS.put(SCREENSHOTS, true);
         DEFAULTS.put(QUALITY_PICKER, false);
         DEFAULTS.put(AUTO_SCROLL, false);
+        DEFAULTS.put(AUTO_SCROLL_PROFILES, false);
         DEFAULTS.put(COMMENT_MEDIA, true);
         DEFAULTS.put(SAVE_ALL_PHOTOS, false);
         DEFAULTS.put(COMMENT_REPOSTS, true);
@@ -159,6 +183,7 @@ final class Prefs {
         DEFAULTS.put(EXTRA_FEATURES, true);
         DEFAULTS.put(CLEAN_LINKS, true);
         DEFAULTS.put(REGION_LANGUAGE, true);
+        DEFAULTS.put(FEED_REGION_OWN, false);
         DEFAULTS.put(GHOST_STORIES, false);
         DEFAULTS.put(GHOST_PROFILE, false);
         DEFAULTS.put(GHOST_POSTS, false);
@@ -179,6 +204,21 @@ final class Prefs {
         DEFAULTS.put(ACCENT, false);
         DEFAULTS.put(BURN_IN, false);
         DEFAULTS.put(AUTHOR_REGION, false);
+        DEFAULTS.put(COMMENT_HANDLE, false);
+        DEFAULTS.put(KEEP_BRIGHTNESS, false);
+        DEFAULTS.put(EXACT_TIME, false);
+        DEFAULTS.put(EXACT_TIME_SECONDS, false);
+        DEFAULTS.put(EXACT_COUNTS, false);
+        DEFAULTS.put(HIDE_ROOT, false);
+        DEFAULTS.put(HIDE_PASSKEY, false);
+        DEFAULTS.put(NO_MOTION_SENSORS, false);
+        DEFAULTS.put(NO_HDR, false);
+        DEFAULTS.put(PREFER_H264, false);
+        DEFAULTS.put(PHOTO_BEST, false);
+        DEFAULTS.put(PIP_FEED, false);
+        DEFAULTS.put(NO_TRACKERS, false);
+        DEFAULTS.put(UPLOAD_ORIGINAL, false);
+        DEFAULTS.put(NO_TIKTOK_ANALYTICS, false);
         DEFAULTS.put(NO_LOGIN_WALL, true);
         DEFAULTS.put(AUTO_TRANSLATE, false);
         DEFAULTS.put(HIDE_BUTTONS, false);
@@ -222,20 +262,22 @@ final class Prefs {
         region = Regions.normalize(loaded.getString(REGION, DEFAULT_REGION));
         oldVideoDays = Math.max(1, loaded.getInt(OLD_VIDEO_DAYS, DEFAULT_OLD_VIDEO_DAYS));
         for (String key : new String[]{FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE, STREAK_STICKER,
-                STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED, ANDROID_ID, FONT_SOURCE, FONT_FILE}) TEXTS.put(key, loaded.getString(key, ""));
+                STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED, ANDROID_ID, FONT_SOURCE, FONT_FILE, FEED_REGION}) TEXTS.put(key, loaded.getString(key, ""));
         for (String key : new String[]{FILTER_MIN_LIKES, FILTER_MIN_VIEWS}) NUMBERS.put(key, loaded.getLong(key, 0));
         NUMBERS.put(ACCENT_COLOR, loaded.getLong(ACCENT_COLOR, DEFAULT_ACCENT));
         NUMBERS.put(OVERLAY_OPACITY, loaded.getLong(OVERLAY_OPACITY, 100));
         NUMBERS.put(REFRESH_RATE, loaded.getLong(REFRESH_RATE, 0));
         NUMBERS.put(HD_BITRATE, loaded.getLong(HD_BITRATE, 0));
         NUMBERS.put(STREAK_TIME, loaded.getLong(STREAK_TIME, 0));
+        NUMBERS.put(QUALITY_WIFI, loaded.getLong(QUALITY_WIFI, 0));
+        NUMBERS.put(QUALITY_MOBILE, loaded.getLong(QUALITY_MOBILE, 0));
         rebuildRules();
     }
 
     /** Text strings, numbers and the region, besides the switches in {@link #DEFAULTS}. */
     private static final String[] TEXT_KEYS = {REGION, FILTER_WORDS, FILTER_AUTHORS, SPEEDS, TRANSLATE_EXCLUDE,
-            STREAK_STICKER, STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED};
-    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY, REFRESH_RATE, HD_BITRATE, STREAK_TIME};
+            STREAK_STICKER, STREAK_STICKER_TITLE, STREAK_STICKER_URL, STREAK_EXCLUDED, FEED_REGION};
+    private static final String[] LONG_KEYS = {FILTER_MIN_LIKES, FILTER_MIN_VIEWS, ACCENT_COLOR, OVERLAY_OPACITY, REFRESH_RATE, HD_BITRATE, STREAK_TIME, QUALITY_WIFI, QUALITY_MOBILE};
 
     /** All settings as JSON, for a backup the user keeps wherever they like. */
     static String export() {
@@ -304,6 +346,11 @@ final class Prefs {
     /** Selected spoof region as lower-case ISO code, or empty when disabled. */
     static String region() { return region; }
 
+    /** The country recommendations come from: the own one when picked, else empty (the SIM's region). */
+    static String feedRegion() {
+        return on(FEED_REGION_OWN) ? Regions.normalize(text(FEED_REGION)) : "";
+    }
+
     static void setRegion(String iso) {
         region = Regions.normalize(iso);
         SharedPreferences current = preferences;
@@ -359,6 +406,7 @@ final class Prefs {
         for (String key : RESTART_KEYS) value.append(on(key) ? '1' : '0');
         if (on(ACCENT)) value.append(number(ACCENT_COLOR));
         if (on(FONT)) value.append(text(FONT_SOURCE)).append(text(FONT_FILE));
+        if (on(FEED_REGION_OWN)) value.append(text(FEED_REGION));
         return value.toString();
     }
 

@@ -463,9 +463,16 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.PLAYBACK, S.GROUP_PLAYBACK, S.SPEED_3X, S.SPEED_3X_DESC, Prefs.SPEED_3X),
             new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.REMEMBER_CLEAN, S.REMEMBER_CLEAN_DESC, Prefs.REMEMBER_CLEAN),
             new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.SEEKBAR, S.SEEKBAR_DESC, Prefs.SEEKBAR),
+            new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.EXACT_TIME, S.EXACT_TIME_DESC, Prefs.EXACT_TIME),
+            new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.EXACT_COUNTS, S.EXACT_COUNTS_DESC, Prefs.EXACT_COUNTS),
+            new Setting(Category.PLAYBACK, S.GROUP_SCREEN, S.PIP_FEED, S.PIP_FEED_DESC, Prefs.PIP_FEED),
+            new Setting(Category.PLAYBACK, S.GROUP_QUALITY, S.PREFER_H264, S.PREFER_H264_DESC, Prefs.PREFER_H264),
+            new Setting(Category.PLAYBACK, S.GROUP_QUALITY, S.NO_HDR, S.NO_HDR_DESC, Prefs.NO_HDR),
+            new Setting(Category.PLAYBACK, S.GROUP_QUALITY, S.PHOTO_BEST, S.PHOTO_BEST_DESC, Prefs.PHOTO_BEST),
             new Setting(Category.INTERFACE, S.GROUP_COLORS, S.ACCENT, S.ACCENT_DESC, Prefs.ACCENT),
             new Setting(Category.INTERFACE, S.GROUP_COLORS, S.AMOLED, S.AMOLED_DESC, Prefs.AMOLED),
             new Setting(Category.INTERFACE, S.GROUP_SCREEN, S.BURN_IN, S.BURN_IN_DESC, Prefs.BURN_IN),
+            new Setting(Category.INTERFACE, S.GROUP_SCREEN, S.KEEP_BRIGHTNESS, S.KEEP_BRIGHTNESS_DESC, Prefs.KEEP_BRIGHTNESS),
             new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.NEW_PROFILE, S.NEW_PROFILE_DESC, Prefs.NEW_PROFILE),
             new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.HIDE_INBOX_STORIES, S.HIDE_INBOX_STORIES_DESC, Prefs.HIDE_INBOX_STORIES),
             new Setting(Category.INTERFACE, S.GROUP_PROFILE, S.MESSAGE_TIME, S.MESSAGE_TIME_DESC, Prefs.MESSAGE_TIME),
@@ -476,6 +483,7 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.SOCIAL, null, S.SELF_REPOST, S.SELF_REPOST_DESC, Prefs.SELF_REPOST),
             new Setting(Category.SOCIAL, null, S.COMMENT_PHOTOS, S.COMMENT_PHOTOS_DESC, Prefs.COMMENT_PHOTOS),
             new Setting(Category.SOCIAL, null, S.AUTHOR_REGION, S.AUTHOR_REGION_DESC, Prefs.AUTHOR_REGION),
+            new Setting(Category.SOCIAL, null, S.COMMENT_HANDLE, S.COMMENT_HANDLE_DESC, Prefs.COMMENT_HANDLE),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.NO_WATERMARK, null, Prefs.NO_WATERMARK),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.DOWNLOAD_ANY, S.DOWNLOAD_ANY_DESC, Prefs.DOWNLOAD_ANY),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.QUALITY_PICKER, S.QUALITY_PICKER_DESC, Prefs.QUALITY_PICKER),
@@ -485,6 +493,7 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.AVATAR_DOWNLOAD, S.AVATAR_DOWNLOAD_DESC, Prefs.AVATAR_DOWNLOAD),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.CHAT_STICKER, S.CHAT_STICKER_DESC, Prefs.CHAT_STICKER),
             new Setting(Category.SHARING, S.GROUP_MEDIA, S.HD_UPLOAD, S.HD_UPLOAD_DESC, Prefs.HD_UPLOAD),
+            new Setting(Category.SHARING, S.GROUP_MEDIA, S.UPLOAD_ORIGINAL, S.UPLOAD_ORIGINAL_DESC, Prefs.UPLOAD_ORIGINAL),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.CLEAN_LINKS, S.CLEAN_LINKS_DESC, Prefs.CLEAN_LINKS),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.EXTERNAL_BROWSER, S.EXTERNAL_BROWSER_DESC, Prefs.EXTERNAL_BROWSER),
             new Setting(Category.SHARING, S.GROUP_LINKS, S.SCREENSHOTS, S.SCREENSHOTS_DESC, Prefs.SCREENSHOTS),
@@ -497,7 +506,13 @@ public final class ModSettingsActivity extends Activity {
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.BLOCK_LOCATION, S.BLOCK_LOCATION_DESC, Prefs.BLOCK_LOCATION),
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.HIDE_VPN, S.HIDE_VPN_DESC, Prefs.HIDE_VPN),
             new Setting(Category.GHOST, S.GROUP_DEVICE, S.SPOOF_ANDROID_ID, S.SPOOF_ANDROID_ID_DESC, Prefs.SPOOF_ANDROID_ID),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.HIDE_ROOT, S.HIDE_ROOT_DESC, Prefs.HIDE_ROOT),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.NO_MOTION_SENSORS, S.NO_MOTION_SENSORS_DESC, Prefs.NO_MOTION_SENSORS),
+            new Setting(Category.GHOST, S.GROUP_DEVICE, S.HIDE_PASSKEY, S.HIDE_PASSKEY_DESC, Prefs.HIDE_PASSKEY),
+            new Setting(Category.GHOST, S.GROUP_ANALYTICS, S.NO_TRACKERS, S.NO_TRACKERS_DESC, Prefs.NO_TRACKERS),
+            new Setting(Category.GHOST, S.GROUP_ANALYTICS, S.NO_TIKTOK_ANALYTICS, S.NO_TIKTOK_ANALYTICS_DESC, Prefs.NO_TIKTOK_ANALYTICS),
             new Setting(Category.REGION, null, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE),
+            new Setting(Category.REGION, null, S.FEED_REGION_OWN, S.FEED_REGION_OWN_DESC, Prefs.FEED_REGION_OWN),
             new Setting(Category.STREAKS, null, S.AUTO_STREAK, S.AUTO_STREAK_DESC, Prefs.AUTO_STREAK),
             new Setting(Category.LAB, null, S.EXTRA_FEATURES, S.EXTRA_FEATURES_DESC, Prefs.EXTRA_FEATURES),
             new Setting(Category.LAB, null, S.NO_LOGIN_WALL, S.NO_LOGIN_WALL_DESC, Prefs.NO_LOGIN_WALL),
@@ -775,7 +790,7 @@ public final class ModSettingsActivity extends Activity {
             {"resume position", "RESUME_POSITION"}, {"playback speed", "REMEMBER_SPEED"}, {"downloads plus", "QUALITY_PICKER"}, {"auto-scroll", "AUTO_SCROLL"}, {"comment media", "COMMENT_MEDIA"},
             {"comment copy", "COPY_COMMENT"}, {"external browser", "EXTERNAL_BROWSER"},
             {"interface", "HIDE_INBOX_STORIES"}, {"overlay", "OVERLAY_OPACITY"}, {"accent color", "ACCENT"},
-            {"author region", "AUTHOR_REGION"}, {"comment translation", "AUTO_TRANSLATE"}, {"downloads", "NO_WATERMARK"}, {"clean links", "CLEAN_LINKS"},
+            {"author region", "AUTHOR_REGION"}, {"comment author", "COMMENT_HANDLE"}, {"exact time", "EXACT_TIME"}, {"exact counts", "EXACT_COUNTS"}, {"keep brightness", "KEEP_BRIGHTNESS"}, {"device checks", "HIDE_ROOT"}, {"playback quality", "PREFER_H264"}, {"photo quality", "PHOTO_BEST"}, {"trackers", "NO_TRACKERS"}, {"analytics", "NO_TIKTOK_ANALYTICS"}, {"comment translation", "AUTO_TRANSLATE"}, {"downloads", "NO_WATERMARK"}, {"clean links", "CLEAN_LINKS"},
             {"invisible mode", "SECTION_GHOST"}, {"region", "REGION"}, {"recommendation", "REGION_LANGUAGE"},
             {"A/B overrides", "EXTRA_FEATURES"}, {"auto streaks", "AUTO_STREAK"}, {"streak sticker", "STREAK_STICKER"},
             {"friend card", "ACQUAINTANCES"}, {"unmute", "UNMUTE"}, {"font", "FONT"}, {"privacy", "SECTION_PRIVACY"},
@@ -1001,6 +1016,19 @@ public final class ModSettingsActivity extends Activity {
             syncs.add(() -> {
                 value.setText(bitrateLabel());
                 row.setVisibility(Prefs.on(Prefs.HD_UPLOAD) ? View.VISIBLE : View.GONE);
+            });
+        } else if (Prefs.EXACT_TIME.equals(key)) {
+            View seconds = toggle(card, S.EXACT_TIME_SECONDS, null, Prefs.EXACT_TIME_SECONDS);
+            subOption(seconds);
+            syncs.add(() -> seconds.setVisibility(Prefs.on(Prefs.EXACT_TIME) ? View.VISIBLE : View.GONE));
+        } else if (Prefs.PREFER_H264.equals(key)) {
+            TextView wifi = navigation(card, I18n.get(S.QUALITY_WIFI), qualityLabel(Prefs.QUALITY_WIFI),
+                    view -> openSheet(qualitySheet(Prefs.QUALITY_WIFI)));
+            TextView mobile = navigation(card, I18n.get(S.QUALITY_MOBILE), qualityLabel(Prefs.QUALITY_MOBILE),
+                    view -> openSheet(qualitySheet(Prefs.QUALITY_MOBILE)));
+            syncs.add(() -> {
+                wifi.setText(qualityLabel(Prefs.QUALITY_WIFI));
+                mobile.setText(qualityLabel(Prefs.QUALITY_MOBILE));
             });
         } else if (Prefs.AMOLED.equals(key)) {
             TextView value = navigation(card, I18n.get(S.FONT), fontLabel(), view -> openSheet(fontSheet()));
@@ -1272,6 +1300,19 @@ public final class ModSettingsActivity extends Activity {
                 hz -> hz == 0 ? I18n.get(S.FONT_TIKTOK) : String.format(locale, I18n.get(S.REFRESH_HZ), hz), S.REFRESH_FOOTER,
                 // This screen is a TikTok window too, so the new rate shows here at once.
                 () -> getWindow().setAttributes(getWindow().getAttributes()));
+    }
+
+    private static final S[] QUALITY_NAMES = {S.QUALITY_AUTO, S.QUALITY_BEST, S.QUALITY_SAVER};
+
+    private String qualityLabel(String key) {
+        long mode = Prefs.number(key);
+        return I18n.get(QUALITY_NAMES[mode >= 0 && mode < QUALITY_NAMES.length ? (int) mode : 0]);
+    }
+
+    /** TikTok's own pick, the best rendition, or the smallest, for one kind of network. */
+    private View qualitySheet(String key) {
+        List<Integer> choices = java.util.Arrays.asList(PlaybackQuality.AUTO, PlaybackQuality.BEST, PlaybackQuality.SAVER);
+        return choiceSheet(key, choices, mode -> I18n.get(QUALITY_NAMES[mode]), S.QUALITY_FOOTER, null);
     }
 
     private String bitrateLabel() {
@@ -2248,14 +2289,25 @@ public final class ModSettingsActivity extends Activity {
         TextView regionValue = navigation(card, I18n.get(S.REGION), regionLabel(),
                 view -> push(regionPage(), true));
         View languageRow = toggle(card, S.REGION_LANGUAGE, S.REGION_LANGUAGE_DESC, Prefs.REGION_LANGUAGE);
-        languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
+        View ownRow = toggle(card, S.FEED_REGION_OWN, S.FEED_REGION_OWN_DESC, Prefs.FEED_REGION_OWN);
+        TextView feedValue = navigation(card, I18n.get(S.FEED_REGION), feedRegionLabel(),
+                view -> push(regionPage(S.FEED_REGION, Prefs.text(Prefs.FEED_REGION), false,
+                        iso -> Prefs.setText(Prefs.FEED_REGION, iso)), true));
+        View feedRow = (View) feedValue.getParent();
         page.footer(I18n.get(S.REGION_DESC));
         regionValue.setCompoundDrawablePadding(dp(8));
+        feedValue.setCompoundDrawablePadding(dp(8));
         Runnable sync = () -> {
             regionValue.setText(regionLabel());
             String flag = RegionFlag.of(Prefs.region());
             regionValue.setCompoundDrawablesRelative(flag == null ? null : new FlagDot(flag, dp(18)), null, null, null);
-            languageRow.setVisibility(Prefs.region().isEmpty() ? View.GONE : View.VISIBLE);
+            boolean spoofing = !Prefs.region().isEmpty();
+            languageRow.setVisibility(spoofing ? View.VISIBLE : View.GONE);
+            ownRow.setVisibility(spoofing ? View.VISIBLE : View.GONE);
+            feedRow.setVisibility(spoofing && Prefs.on(Prefs.FEED_REGION_OWN) ? View.VISIBLE : View.GONE);
+            feedValue.setText(feedRegionLabel());
+            String feedFlag = RegionFlag.of(Prefs.feedRegion());
+            feedValue.setCompoundDrawablesRelative(feedFlag == null ? null : new FlagDot(feedFlag, dp(18)), null, null, null);
         };
         sync.run();
         page.root.setTag(sync);
@@ -2282,7 +2334,12 @@ public final class ModSettingsActivity extends Activity {
     }
 
     private View regionPage() {
-        Page page = new Page(I18n.get(S.REGION), false);
+        return regionPage(S.REGION, Prefs.region(), true, Prefs::setRegion);
+    }
+
+    /** The country list; {@code withOff} adds "Off" on top. */
+    private View regionPage(S title, String selected, boolean withOff, java.util.function.Consumer<String> select) {
+        Page page = new Page(I18n.get(title), false);
         LinearLayout searchBox = new LinearLayout(this);
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         searchBox.setPadding(dp(12), 0, dp(12), 0);
@@ -2308,14 +2365,16 @@ public final class ModSettingsActivity extends Activity {
         LinearLayout list = page.card();
         List<View> rows = new ArrayList<>();
         List<String> names = new ArrayList<>();
-        String selected = Prefs.region();
-        View off = choice(list, I18n.get(S.REGION_OFF), selected.isEmpty(), () -> Prefs.setRegion(""));
-        leadingIcon(off, new Glyph(Glyph.Kind.GLOBE, palette.textSecondary, dp(22)));
-        rows.add(off);
-        names.add("");
+        if (withOff) {
+            View off = choice(list, I18n.get(S.REGION_OFF), selected.isEmpty(), () -> select.accept(""));
+            leadingIcon(off, new Glyph(Glyph.Kind.GLOBE, palette.textSecondary, dp(22)));
+            rows.add(off);
+            names.add("");
+        }
+        int first = rows.size();
         for (Regions.Region region : Regions.sorted(locale)) {
             String name = region.name(locale);
-            View row = choice(list, name, region.iso.equals(selected), () -> Prefs.setRegion(region.iso));
+            View row = choice(list, name, region.iso.equals(selected), () -> select.accept(region.iso));
             String flag = RegionFlag.of(region.iso);
             if (flag != null) leadingIcon(row, new FlagDot(flag, dp(22)));
             rows.add(row);
@@ -2327,7 +2386,7 @@ public final class ModSettingsActivity extends Activity {
             @Override public void afterTextChanged(Editable s) {
                 String query = s.toString().trim().toLowerCase(locale);
                 for (int index = 0; index < rows.size(); index++) {
-                    boolean visible = query.isEmpty() ? true : index > 0 && names.get(index).contains(query);
+                    boolean visible = query.isEmpty() ? true : index >= first && names.get(index).contains(query);
                     rows.get(index).setVisibility(visible ? View.VISIBLE : View.GONE);
                 }
             }
@@ -2396,6 +2455,12 @@ public final class ModSettingsActivity extends Activity {
     private String regionLabel() {
         Regions.Region region = Regions.find(Prefs.region());
         return region == null ? I18n.get(S.OFF) : region.name(locale);
+    }
+
+    /** The own recommendation country, or a prompt to pick one. */
+    private String feedRegionLabel() {
+        Regions.Region region = Regions.find(Prefs.feedRegion());
+        return region == null ? I18n.get(S.FEED_REGION_PICK) : region.name(locale);
     }
 
     // ---- rows ------------------------------------------------------------------------------
@@ -2530,7 +2595,9 @@ public final class ModSettingsActivity extends Activity {
     /** Settings still being tested on real accounts; they carry a "Beta" mark. */
     private static final String[] BETA_KEYS = {Prefs.NO_LOGIN_WALL, Prefs.BLOCK_LOCATION, Prefs.HIDE_VPN, Prefs.SPOOF_ANDROID_ID,
             Prefs.UNMUTE, Prefs.SELF_REPOST, Prefs.HD_UPLOAD, Prefs.GHOST_ONLINE, Prefs.GHOST_READ,
-            Prefs.COMMENT_PHOTOS, Prefs.NO_HASHTAG_LIMIT, Prefs.CAMERA_EXTRAS};
+            Prefs.COMMENT_PHOTOS, Prefs.NO_HASHTAG_LIMIT, Prefs.CAMERA_EXTRAS, Prefs.HIDE_ROOT, Prefs.PIP_FEED,
+            Prefs.PREFER_H264, Prefs.PHOTO_BEST, Prefs.NO_MOTION_SENSORS, Prefs.NO_TIKTOK_ANALYTICS, Prefs.UPLOAD_ORIGINAL,
+            Prefs.FEED_REGION_OWN};
 
     /**
      * A small mark after a row's title: an outlined "Beta" for settings under test, a plain
